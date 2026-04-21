@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文章列表 - 自动化搜梗+生文工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6',
+            success: '#10B981',
+            danger: '#EF4444',
+            warning: '#F59E0B',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <nav class="bg-white shadow-md">
+    <div class="max-w-6xl mx-auto px-4 py-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800">文章列表</h1>
+          <p class="text-gray-500 text-sm mt-1">共 <span id="totalCount">0</span> 条记录</p>
+        </div>
+        <button
+          onclick="window.close()"
+          class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+        >
+          关闭页面
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <select
+          id="workCpFilter"
+          onchange="filterData()"
+          class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition"
+        >
+          <option value="">所有作品/CP</option>
+        </select>
+        <select
+          id="statusFilter"
+          onchange="filterData()"
+          class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition"
+        >
+          <option value="">所有状态</option>
+          <option value="published">已发布</option>
+          <option value="unpublished">未发布</option>
+        </select>
+      </div>
+
+      <div id="articleList" class="space-y-3">
+        <div class="text-center text-gray-400 py-8">
+          加载中...
+        </div>
+      </div>
+
+      <div id="pagination" class="mt-6 flex items-center justify-center gap-2">
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const pageSize = 10;
+    let currentPage = 1;
+    let allArticles = [];
+    let filteredArticles = [];
+    let workCpOptions = [];
+
+    async function loadWorkCpList() {
+      try {
+        const response = await fetch('/api/work-cp');
+        const data = await response.json();
+        if (data.success && data.data) {
+          workCpOptions = data.data;
+          const select = document.getElementById('workCpFilter');
+          data.data.forEach(item => {
+            const option = document.createElement('option');
+            option.value = `${item.work_name}|${item.cp_name}`;
+            option.textContent = `${item.work_name} / ${item.cp_name}`;
+            select.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('加载作品/CP列表失败:', error);
+      }
+    }
+
+    async function loadArticleList() {
+      try {
+        const response = await fetch('/api/articles');
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          allArticles = data.data;
+          filterData();
+        } else {
+          document.getElementById('articleList').innerHTML = `
+            <div class="text-center text-gray-400 py-8">
+              暂无数据
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('加载数据失败:', error);
+        document.getElementById('articleList').innerHTML = `
+          <div class="text-center text-red-400 py-8">
+            加载失败: ${error.message}
+          </div>
+        `;
+      }
+    }
+
+    function filterData() {
+      const workCpValue = document.getElementById('workCpFilter').value;
+      const statusValue = document.getElementById('statusFilter').value;
+
+      filteredArticles = allArticles.filter(item => {
+        let matchWorkCp = true;
+        let matchStatus = true;
+
+        if (workCpValue) {
+          const [workName, cpName] = workCpValue.split('|');
+          matchWorkCp = item.work_name === workName && item.cp_name === cpName;
+        }
+
+        if (statusValue) {
+          if (statusValue === 'published') {
+            matchStatus = item.title_copied && item.normal_content_copied;
+          } else if (statusValue === 'unpublished') {
+            matchStatus = !item.title_copied || !item.normal_content_copied;
+          }
+        }
+
+        return matchWorkCp && matchStatus;
+      });
+
+      currentPage = 1;
+      document.getElementById('totalCount').textContent = filteredArticles.length;
+      renderList();
+    }
+
+    function renderList() {
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize;
+      const pageData = filteredArticles.slice(start, end);
+
+      if (pageData.length === 0) {
+        document.getElementById('articleList').innerHTML = `
+          <div class="text-center text-gray-400 py-8">
+            暂无数据
+          </div>
+        `;
+        document.getElementById('pagination').innerHTML = '';
+        return;
+      }
+
+      const html = pageData.map(item => `
+        <div class="flex items-start justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 text-xs rounded ${item.title_copied && item.normal_content_copied ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
+                ${item.title_copied && item.normal_content_copied ? '已发布' : '未发布'}
+              </span>
+              <span class="text-sm text-gray-500">${escapeHtml(item.work_name)} / ${escapeHtml(item.cp_name)}</span>
+            </div>
+            <div class="text-sm text-gray-700 line-clamp-2">${escapeHtml(item.article_content)}</div>
+            <div class="flex gap-2 mt-2">
+              <span class="text-xs ${item.title_copied ? 'text-green-600' : 'text-gray-400'}">标题 ${item.title_copied ? '✓' : '✗'}</span>
+              <span class="text-xs ${item.normal_content_copied ? 'text-green-600' : 'text-gray-400'}">正文 ${item.normal_content_copied ? '✓' : '✗'}</span>
+              <span class="text-xs ${item.pay_content_copied ? 'text-green-600' : 'text-gray-400'}">付费 ${item.pay_content_copied ? '✓' : '✗'}</span>
+            </div>
+            <div class="text-xs text-gray-400 mt-2">创建时间: ${item.created_at || '未知'}</div>
+          </div>
+          <button
+            onclick="deleteArticle(${item.id})"
+            class="ml-4 px-3 py-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+          >
+            删除
+          </button>
+        </div>
+      `).join('');
+
+      document.getElementById('articleList').innerHTML = html;
+      renderPagination();
+    }
+
+    function renderPagination() {
+      const totalPages = Math.ceil(filteredArticles.length / pageSize);
+
+      if (totalPages <= 1) {
+        document.getElementById('pagination').innerHTML = '';
+        return;
+      }
+
+      let html = '';
+
+      html += `<button
+        onclick="goToPage(${currentPage - 1})"
+        class="px-3 py-2 rounded-lg ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}"
+        ${currentPage === 1 ? 'disabled' : ''}
+      >
+        上一页
+      </button>`;
+
+      const start = Math.max(1, currentPage - 2);
+      const end = Math.min(totalPages, currentPage + 2);
+
+      if (start > 1) {
+        html += `<button onclick="goToPage(1)" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700">1</button>`;
+        if (start > 2) {
+          html += `<span class="px-2 text-gray-400">...</span>`;
+        }
+      }
+
+      for (let i = start; i <= end; i++) {
+        html += `<button
+          onclick="goToPage(${i})"
+          class="px-3 py-2 rounded-lg ${i === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}"
+        >
+          ${i}
+        </button>`;
+      }
+
+      if (end < totalPages) {
+        if (end < totalPages - 1) {
+          html += `<span class="px-2 text-gray-400">...</span>`;
+        }
+        html += `<button onclick="goToPage(${totalPages})" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700">${totalPages}</button>`;
+      }
+
+      html += `<button
+        onclick="goToPage(${currentPage + 1})"
+        class="px-3 py-2 rounded-lg ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}"
+        ${currentPage === totalPages ? 'disabled' : ''}
+      >
+        下一页
+      </button>`;
+
+      document.getElementById('pagination').innerHTML = html;
+    }
+
+    function goToPage(page) {
+      const totalPages = Math.ceil(filteredArticles.length / pageSize);
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      renderList();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function deleteArticle(id) {
+      if (!confirm('确定要删除这条记录吗？')) return;
+
+      try {
+        const response = await fetch(`/api/articles/${id}`, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          alert('删除成功');
+          await loadArticleList();
+        } else {
+          alert('删除失败: ' + data.message);
+        }
+      } catch (error) {
+        alert('删除失败: ' + error.message);
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      await loadWorkCpList();
+      await loadArticleList();
+    });
+  </script>
+</body>
+</html>
