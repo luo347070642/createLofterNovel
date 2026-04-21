@@ -30,6 +30,18 @@
           <h1 class="text-2xl font-bold text-gray-800">梗内容列表</h1>
           <p class="text-gray-500 text-sm mt-1">共 <span id="totalCount">0</span> 条记录</p>
         </div>
+        <div class="flex items-center gap-6">
+          <div class="flex items-center gap-4 text-sm">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+              <span class="text-gray-600">已完成: <span id="completedCount" class="font-semibold text-green-600">0</span></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+              <span class="text-gray-600">待生成: <span id="pendingCount" class="font-semibold text-yellow-600">0</span></span>
+            </div>
+          </div>
+        </div>
         <button
           onclick="window.close()"
           class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
@@ -71,6 +83,25 @@
       </div>
     </div>
   </main>
+
+  <div id="gengContentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">梗内容详情</h3>
+        <button onclick="closeGengContentModal()" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="gengContentText" class="text-sm whitespace-pre-wrap"></div>
+      <div class="mt-4 flex justify-end">
+        <button onclick="closeGengContentModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+          关闭
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const pageSize = 10;
@@ -145,6 +176,12 @@
 
       currentPage = 1;
       document.getElementById('totalCount').textContent = filteredGeng.length;
+
+      const completedCount = filteredGeng.filter(item => item.status === 'completed').length;
+      const pendingCount = filteredGeng.filter(item => item.status === 'pending').length;
+      document.getElementById('completedCount').textContent = completedCount;
+      document.getElementById('pendingCount').textContent = pendingCount;
+
       renderList();
     }
 
@@ -175,12 +212,26 @@
             <div class="text-sm text-gray-700 line-clamp-2">${escapeHtml(item.geng_text)}</div>
             <div class="text-xs text-gray-400 mt-2">创建时间: ${item.created_at || '未知'}</div>
           </div>
-          <button
-            onclick="deleteGeng(${item.id})"
-            class="ml-4 px-3 py-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-          >
-            删除
-          </button>
+          <div class="flex items-center gap-2 ml-4">
+            <button
+              onclick="viewGengContent(${item.id})"
+              class="px-3 py-1 bg-blue-100 text-blue-600 text-xs rounded hover:bg-blue-200 transition-colors"
+            >
+              查看
+            </button>
+            <button
+              onclick="generateSingleArticle(${item.id})"
+              class="px-3 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
+            >
+              生成文章
+            </button>
+            <button
+              onclick="deleteGeng(${item.id})"
+              class="px-3 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
+            >
+              删除
+            </button>
+          </div>
         </div>
       `).join('');
 
@@ -261,13 +312,13 @@
         const data = await response.json();
 
         if (data.success) {
-          alert('删除成功');
+          showNotification('删除成功', 'success');
           await loadGengList();
         } else {
-          alert('删除失败: ' + data.message);
+          showNotification('删除失败: ' + data.message, 'error');
         }
       } catch (error) {
-        alert('删除失败: ' + error.message);
+        showNotification('删除失败: ' + error.message, 'error');
       }
     }
 
@@ -276,6 +327,75 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    function showNotification(message, type = 'success') {
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-y-0 opacity-100 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'info' ? 'bg-blue-500 text-white' :
+        'bg-gray-500 text-white'
+      }`;
+      notification.textContent = message;
+
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.classList.add('translate-y-[-20px]', 'opacity-0');
+      }, 3000);
+
+      setTimeout(() => {
+        if (notification.parentNode) {
+          document.body.removeChild(notification);
+        }
+      }, 3500);
+    }
+
+    let isProcessing = false;
+
+    async function generateSingleArticle(gengId) {
+      if (isProcessing) {
+        showNotification('正在处理中，请稍后', 'error');
+        return;
+      }
+
+      isProcessing = true;
+
+      try {
+        const response = await fetch('/api/generate-single-article', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gengId })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          showNotification('文章生成成功', 'success');
+          await loadGengList();
+        } else {
+          showNotification('生成失败: ' + data.message, 'error');
+        }
+      } catch (error) {
+        showNotification('生成失败: ' + error.message, 'error');
+      } finally {
+        isProcessing = false;
+      }
+    }
+
+    function viewGengContent(id) {
+      const gengItem = allGeng.find(item => item.id === id);
+      if (!gengItem) return;
+
+      const modal = document.getElementById('gengContentModal');
+      const modalContent = document.getElementById('gengContentText');
+      modalContent.textContent = gengItem.geng_text;
+      modal.classList.remove('hidden');
+    }
+
+    function closeGengContentModal() {
+      const modal = document.getElementById('gengContentModal');
+      modal.classList.add('hidden');
     }
 
     document.addEventListener('DOMContentLoaded', async function() {

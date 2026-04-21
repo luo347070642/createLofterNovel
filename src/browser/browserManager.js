@@ -130,7 +130,14 @@ async function initializeDoubaoPage() {
   }
 
   if (doubaoPage) {
-    return doubaoPage;
+    try {
+      // 检查页面是否有效
+      await doubaoPage.evaluate(() => true);
+      return doubaoPage;
+    } catch (error) {
+      console.log('豆包页面已关闭，重新创建...');
+      doubaoPage = null;
+    }
   }
 
   console.log('正在初始化豆包页面...');

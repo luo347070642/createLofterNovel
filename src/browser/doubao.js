@@ -36,7 +36,18 @@ async function generateArticle(geng) {
     console.log(`
 正在重新生成文章...`);
 
-    const page = await initializeDoubaoPage();
+    let page = await initializeDoubaoPage();
+
+    // 检查页面是否有效
+    try {
+      await page.evaluate(() => true);
+    } catch (error) {
+      console.log('页面已关闭，重新创建...');
+      // 重新初始化页面
+      const { shutdown, initializeDoubaoPage: initPage } = require('./browserManager');
+      await shutdown();
+      page = await initPage();
+    }
 
     console.log('重新加载豆包首页...');
     await page.goto('https://www.doubao.com/chat/', {
@@ -364,7 +375,18 @@ async function generateArticles(workCpFilter = '', statusFilter = '') {
     let successCount = 0;
 
     console.log(`正在初始化豆包页面，准备处理 ${pendingGengs.length} 条待生成的梗...`);
-    const page = await initializeDoubaoPage();
+    let page = await initializeDoubaoPage();
+
+    // 检查页面是否有效
+    try {
+      await page.evaluate(() => true);
+    } catch (error) {
+      console.log('页面已关闭，重新创建...');
+      // 重新初始化页面
+      const { shutdown, initializeDoubaoPage: initPage } = require('./browserManager');
+      await shutdown();
+      page = await initPage();
+    }
 
     console.log(`开始循环处理，共有 ${pendingGengs.length} 条梗`);
     for (let i = 0; i < pendingGengs.length; i++) {

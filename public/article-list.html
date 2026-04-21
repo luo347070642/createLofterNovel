@@ -30,6 +30,18 @@
           <h1 class="text-2xl font-bold text-gray-800">文章列表</h1>
           <p class="text-gray-500 text-sm mt-1">共 <span id="totalCount">0</span> 条记录</p>
         </div>
+        <div class="flex items-center gap-6">
+          <div class="flex items-center gap-4 text-sm">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+              <span class="text-gray-600">已发布: <span id="publishedCount" class="font-semibold text-green-600">0</span></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+              <span class="text-gray-600">未发布: <span id="unpublishedCount" class="font-semibold text-yellow-600">0</span></span>
+            </div>
+          </div>
+        </div>
         <button
           onclick="window.close()"
           class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
@@ -72,12 +84,32 @@
     </div>
   </main>
 
+  <div id="articleContentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">文章内容</h3>
+        <button onclick="closeArticleContentModal()" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="articleContentText" class="text-sm whitespace-pre-wrap"></div>
+      <div class="mt-4 flex justify-end">
+        <button onclick="closeArticleContentModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+          关闭
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const pageSize = 10;
     let currentPage = 1;
     let allArticles = [];
     let filteredArticles = [];
     let workCpOptions = [];
+    window.articleContents = [];
 
     async function loadWorkCpList() {
       try {
@@ -105,6 +137,54 @@
 
         if (data.success && data.data) {
           allArticles = data.data;
+          // 存储文章内容到 window.articleContents，需要从 article_content 中提取标题、普通内容和付费内容
+          window.articleContents = allArticles.map((item, index) => {
+            const content = item.article_content || '';
+            console.log(`文章 ${index} (ID: ${item.id}) 原始内容:`, content.substring(0, 500) + (content.length > 500 ? '...' : ''));
+            
+            let title = '';
+            let normalContent = '';
+            let payContent = '';
+            
+            // 分析文章格式：【类型】标题 - 正文
+            const match = content.match(/【[^】]+】\s*(.+?)\s*-\s*(.+)/s);
+            if (match) {
+              title = match[1].trim();
+              const mainContent = match[2].trim();
+              console.log(`文章 ${index} 提取标题成功:`, title);
+              
+              // 检查正文中是否有付费内容标记
+              const payContentMatch = mainContent.match(/【付费卡点】[\s\n]*(.+)/s);
+              if (payContentMatch) {
+                normalContent = mainContent.substring(0, payContentMatch.index).trim();
+                payContent = payContentMatch[1].trim();
+                console.log(`文章 ${index} 提取普通内容成功`);
+                console.log(`文章 ${index} 提取付费内容成功`);
+              } else {
+                // 没有付费内容，全部作为普通内容
+                normalContent = mainContent;
+                console.log(`文章 ${index} 提取普通内容成功（无付费内容）`);
+              }
+            } else {
+              // 如果没有匹配到标准格式，尝试其他方式
+              title = content.substring(0, 100).trim();
+              normalContent = content;
+              console.log(`文章 ${index} 使用备用提取方式`);
+            }
+
+            console.log(`文章 ${index} 提取结果:`, {
+              title: title ? '有内容' : '空',
+              normalContent: normalContent ? '有内容' : '空',
+              payContent: payContent ? '有内容' : '空'
+            });
+
+            return {
+              title: title,
+              normalContent: normalContent,
+              payContent: payContent
+            };
+          });
+          console.log('window.articleContents:', window.articleContents);
           filterData();
         } else {
           document.getElementById('articleList').innerHTML = `
@@ -149,6 +229,12 @@
 
       currentPage = 1;
       document.getElementById('totalCount').textContent = filteredArticles.length;
+
+      const publishedCount = filteredArticles.filter(item => item.title_copied && item.normal_content_copied).length;
+      const unpublishedCount = filteredArticles.filter(item => !item.title_copied || !item.normal_content_copied).length;
+      document.getElementById('publishedCount').textContent = publishedCount;
+      document.getElementById('unpublishedCount').textContent = unpublishedCount;
+
       renderList();
     }
 
@@ -167,7 +253,13 @@
         return;
       }
 
-      const html = pageData.map(item => `
+      const html = pageData.map((item, index) => {
+        const actualIndex = allArticles.findIndex(article => article.id === item.id);
+        console.log('item:', item);
+        console.log('actualIndex:', actualIndex);
+        console.log('allArticles[actualIndex]:', actualIndex >= 0 ? allArticles[actualIndex] : 'undefined');
+        console.log('window.articleContents[actualIndex]:', actualIndex >= 0 ? window.articleContents[actualIndex] : 'undefined');
+        return `
         <div class="flex items-start justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-2">
@@ -177,21 +269,43 @@
               <span class="text-sm text-gray-500">${escapeHtml(item.work_name)} / ${escapeHtml(item.cp_name)}</span>
             </div>
             <div class="text-sm text-gray-700 line-clamp-2">${escapeHtml(item.article_content)}</div>
-            <div class="flex gap-2 mt-2">
-              <span class="text-xs ${item.title_copied ? 'text-green-600' : 'text-gray-400'}">标题 ${item.title_copied ? '✓' : '✗'}</span>
-              <span class="text-xs ${item.normal_content_copied ? 'text-green-600' : 'text-gray-400'}">正文 ${item.normal_content_copied ? '✓' : '✗'}</span>
-              <span class="text-xs ${item.pay_content_copied ? 'text-green-600' : 'text-gray-400'}">付费 ${item.pay_content_copied ? '✓' : '✗'}</span>
-            </div>
             <div class="text-xs text-gray-400 mt-2">创建时间: ${item.created_at || '未知'}</div>
           </div>
-          <button
-            onclick="deleteArticle(${item.id})"
-            class="ml-4 px-3 py-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-          >
-            删除
-          </button>
+          <div class="flex items-center gap-2 ml-4">
+            <button 
+              onclick="copyContentByIndex(${actualIndex}, 'title', ${item.id})"
+              class="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded hover:bg-blue-200 transition-colors"
+            >
+              标题
+            </button>
+            <button 
+              onclick="copyContentByIndex(${actualIndex}, 'normalContent', ${item.id})"
+              class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
+            >
+              普通内容
+            </button>
+            <button 
+              onclick="copyContentByIndex(${actualIndex}, 'payContent', ${item.id})"
+              class="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded hover:bg-purple-200 transition-colors"
+            >
+              付费内容
+            </button>
+            <button 
+              onclick="viewArticleContent(${actualIndex})"
+              class="px-2 py-1 bg-indigo-100 text-indigo-600 text-xs rounded hover:bg-indigo-200 transition-colors"
+            >
+              查看
+            </button>
+            <button
+              onclick="deleteArticle(${item.id})"
+              class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
+            >
+              删除
+            </button>
+          </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       document.getElementById('articleList').innerHTML = html;
       renderPagination();
@@ -270,13 +384,13 @@
         const data = await response.json();
 
         if (data.success) {
-          alert('删除成功');
+          showNotification('删除成功', 'success');
           await loadArticleList();
         } else {
-          alert('删除失败: ' + data.message);
+          showNotification('删除失败: ' + data.message, 'error');
         }
       } catch (error) {
-        alert('删除失败: ' + error.message);
+        showNotification('删除失败: ' + error.message, 'error');
       }
     }
 
@@ -285,6 +399,165 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    function showNotification(message, type = 'success') {
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-y-0 opacity-100 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'info' ? 'bg-blue-500 text-white' :
+        'bg-gray-500 text-white'
+      }`;
+      notification.textContent = message;
+
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.classList.add('translate-y-[-20px]', 'opacity-0');
+      }, 3000);
+
+      setTimeout(() => {
+        if (notification.parentNode) {
+          document.body.removeChild(notification);
+        }
+      }, 3500);
+    }
+
+    function copyContentByIndex(index, type, articleId) {
+      console.log('copyContentByIndex called with:', { index, type, articleId });
+      const articleContents = window.articleContents || [];
+      console.log('window.articleContents length:', articleContents.length);
+      console.log('index:', index);
+      
+      if (index < 0 || index >= articleContents.length) {
+        console.log('索引越界:', index, '总长度:', articleContents.length);
+        showNotification('内容索引错误', 'error');
+        return;
+      }
+      
+      const articleContent = articleContents[index];
+      console.log('articleContent:', articleContent);
+      const content = articleContent?.[type];
+      console.log('content:', content);
+
+      if (!content || content.trim() === '') {
+        console.log('内容为空或格式不正确:', { type, content });
+        showNotification('内容为空或格式不正确', 'error');
+        return;
+      }
+
+      // 直接使用 textarea 方法复制，避免焦点问题
+      const textarea = document.createElement('textarea');
+      textarea.value = content;
+      // 设置样式确保 textarea 不可见
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-999999px';
+      textarea.style.top = '-999999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showNotification('复制成功！', 'success');
+          updateStatusAndAPI();
+        } else {
+          showNotification('复制失败，请手动复制', 'error');
+        }
+      } catch (err) {
+        console.error('复制失败:', err);
+        showNotification('复制失败，请手动复制', 'error');
+      } finally {
+        document.body.removeChild(textarea);
+      }
+
+      function updateStatusAndAPI() {
+        // 更新本地状态显示
+        const articleElement = document.querySelector(`[onclick="copyContentByIndex(${index}, '${type}', ${articleId})"]`).closest('.p-4');
+        if (articleElement) {
+          const statusElement = articleElement.querySelector('.px-2.py-1.text-xs.rounded');
+          if (statusElement) {
+            // 这里不需要更新状态文字，因为用户要求保留状态变动显示但不改变按钮文字
+            // 只更新状态样式
+            const titleCopied = type === 'title' || statusElement.textContent.includes('已发布');
+            const normalContentCopied = type === 'normalContent' || statusElement.textContent.includes('已发布');
+            const payContentCopied = type === 'payContent' || statusElement.textContent.includes('已发布');
+            const allCopied = titleCopied && normalContentCopied && payContentCopied;
+
+            if (allCopied) {
+              statusElement.className = 'px-2 py-1 bg-green-100 text-green-700 text-xs rounded';
+              statusElement.textContent = '已发布';
+            } else {
+              statusElement.className = 'px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded';
+              statusElement.textContent = '未发布';
+            }
+          }
+        }
+
+        // 更新 API 状态
+        if (articleId) {
+          fetch(`/api/articles/${articleId}/copy-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: type })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              // 不触发 loadData，只更新本地状态显示
+            }
+          })
+          .catch(err => {
+            console.error('更新复制状态失败:', err);
+            // 不触发 loadData，只更新本地状态显示
+          });
+        }
+      }
+    }
+
+    function viewArticleContent(index) {
+      console.log('viewArticleContent called with:', { index });
+      const articleContents = window.articleContents || [];
+      console.log('window.articleContents length:', articleContents.length);
+      console.log('index:', index);
+      
+      if (index < 0 || index >= articleContents.length) {
+        console.log('索引越界:', index, '总长度:', articleContents.length);
+        showNotification('内容索引错误', 'error');
+        return;
+      }
+      
+      const content = articleContents[index];
+      console.log('content:', content);
+      
+      if (!content) {
+        console.log('内容为空:', content);
+        showNotification('内容为空', 'error');
+        return;
+      }
+
+      const modal = document.getElementById('articleContentModal');
+      const modalContent = document.getElementById('articleContentText');
+
+      let fullText = '';
+      if (content.title) {
+        fullText += '【标题】\n' + content.title + '\n\n';
+      }
+      if (content.normalContent) {
+        fullText += '【普通内容】\n' + content.normalContent + '\n\n';
+      }
+      if (content.payContent) {
+        fullText += '【付费内容】\n' + content.payContent + '\n\n';
+      }
+
+      console.log('fullText:', fullText.substring(0, 200) + (fullText.length > 200 ? '...' : ''));
+      modalContent.textContent = fullText;
+      modal.classList.remove('hidden');
+    }
+
+    function closeArticleContentModal() {
+      const modal = document.getElementById('articleContentModal');
+      modal.classList.add('hidden');
     }
 
     document.addEventListener('DOMContentLoaded', async function() {
