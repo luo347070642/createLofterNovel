@@ -26,7 +26,8 @@ async function initDatabase() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         work_name TEXT NOT NULL,
         cp_name TEXT NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(work_name, cp_name)
       )
     `;
 

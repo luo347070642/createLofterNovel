@@ -1,5 +1,5 @@
 let currentDb = null;
-let dbType = 'mysql';
+let dbType = 'sqlite';
 
 const sqliteDb = require('./db');
 const mysqlDb = require('./mysqlDb');
@@ -119,6 +119,10 @@ async function close() {
   }
 }
 
+function getWorkCpKey(workName, cpName) {
+  return `${workName}_${cpName}`;
+}
+
 // 数据同步功能
 async function syncFromMysql() {
   console.log('开始从 MySQL 同步数据到 SQLite...');
@@ -140,16 +144,20 @@ async function syncFromMysql() {
     console.log(`从 MySQL 获取到 ${mysqlWorkCp.length} 个 work_cp 记录`);
     console.log(`从 SQLite 获取到 ${sqliteWorkCp.length} 个 work_cp 记录`);
     
-    // 创建映射
+    // 创建映射：使用 work_name + cp_name 作为键
     const mysqlWorkCpMap = new Map();
     const sqliteWorkCpMap = new Map();
+    const sqliteWorkCpIdMap = new Map();
     
     for (const item of mysqlWorkCp) {
-      mysqlWorkCpMap.set(item.id, item);
+      const key = getWorkCpKey(item.work_name, item.cp_name);
+      mysqlWorkCpMap.set(key, item);
     }
     
     for (const item of sqliteWorkCp) {
-      sqliteWorkCpMap.set(item.id, item);
+      const key = getWorkCpKey(item.work_name, item.cp_name);
+      sqliteWorkCpMap.set(key, item);
+      sqliteWorkCpIdMap.set(item.id, item);
     }
     
     // 同步 work_cp
@@ -158,33 +166,22 @@ async function syncFromMysql() {
     let workCpDeleted = 0;
     
     // 新增或更新
-    for (const [id, item] of mysqlWorkCpMap) {
-      if (!sqliteWorkCpMap.has(id)) {
+    for (const [key, item] of mysqlWorkCpMap) {
+      if (!sqliteWorkCpMap.has(key)) {
         try {
-          await sqliteDb.insertWorkCp(item.work_name, item.cp_name, id);
+          await sqliteDb.insertWorkCp(item.work_name, item.cp_name);
           workCpAdded++;
         } catch (error) {
           console.log('插入 work_cp 到 SQLite 时出错:', error.message);
         }
-      } else {
-        const existingItem = sqliteWorkCpMap.get(id);
-        if (existingItem.work_name !== item.work_name || existingItem.cp_name !== item.cp_name) {
-          try {
-            await sqliteDb.deleteWorkCp(id);
-            await sqliteDb.insertWorkCp(item.work_name, item.cp_name, id);
-            workCpUpdated++;
-          } catch (error) {
-            console.log('更新 work_cp 时出错:', error.message);
-          }
-        }
       }
     }
     
-    // 删除
-    for (const [id, item] of sqliteWorkCpMap) {
-      if (!mysqlWorkCpMap.has(id)) {
+    // 删除：SQLite中有但MySQL中没有的记录
+    for (const [key, item] of sqliteWorkCpMap) {
+      if (!mysqlWorkCpMap.has(key)) {
         try {
-          await sqliteDb.deleteWorkCp(id);
+          await sqliteDb.deleteWorkCp(item.id);
           workCpDeleted++;
         } catch (error) {
           console.log('删除 work_cp 时出错:', error.message);
@@ -388,16 +385,18 @@ async function syncToMysql() {
     console.log(`从 SQLite 获取到 ${sqliteWorkCp.length} 个 work_cp 记录`);
     console.log(`从 MySQL 获取到 ${mysqlWorkCp.length} 个 work_cp 记录`);
     
-    // 创建映射
+    // 创建映射：使用 work_name + cp_name 作为键
     const sqliteWorkCpMap = new Map();
     const mysqlWorkCpMap = new Map();
     
     for (const item of sqliteWorkCp) {
-      sqliteWorkCpMap.set(item.id, item);
+      const key = getWorkCpKey(item.work_name, item.cp_name);
+      sqliteWorkCpMap.set(key, item);
     }
     
     for (const item of mysqlWorkCp) {
-      mysqlWorkCpMap.set(item.id, item);
+      const key = getWorkCpKey(item.work_name, item.cp_name);
+      mysqlWorkCpMap.set(key, item);
     }
     
     // 同步 work_cp
@@ -405,34 +404,23 @@ async function syncToMysql() {
     let workCpUpdated = 0;
     let workCpDeleted = 0;
     
-    // 新增或更新
-    for (const [id, item] of sqliteWorkCpMap) {
-      if (!mysqlWorkCpMap.has(id)) {
+    // 新增
+    for (const [key, item] of sqliteWorkCpMap) {
+      if (!mysqlWorkCpMap.has(key)) {
         try {
-          await mysqlDb.insertWorkCp(item.work_name, item.cp_name, id);
+          await mysqlDb.insertWorkCp(item.work_name, item.cp_name);
           workCpAdded++;
         } catch (error) {
           console.log('插入 work_cp 到 MySQL 时出错:', error.message);
         }
-      } else {
-        const existingItem = mysqlWorkCpMap.get(id);
-        if (existingItem.work_name !== item.work_name || existingItem.cp_name !== item.cp_name) {
-          try {
-            await mysqlDb.deleteWorkCp(id);
-            await mysqlDb.insertWorkCp(item.work_name, item.cp_name, id);
-            workCpUpdated++;
-          } catch (error) {
-            console.log('更新 work_cp 时出错:', error.message);
-          }
-        }
       }
     }
     
-    // 删除
-    for (const [id, item] of mysqlWorkCpMap) {
-      if (!sqliteWorkCpMap.has(id)) {
+    // 删除：MySQL中有但SQLite中没有的记录
+    for (const [key, item] of mysqlWorkCpMap) {
+      if (!sqliteWorkCpMap.has(key)) {
         try {
-          await mysqlDb.deleteWorkCp(id);
+          await mysqlDb.deleteWorkCp(item.id);
           workCpDeleted++;
         } catch (error) {
           console.log('删除 work_cp 时出错:', error.message);

@@ -1112,20 +1112,18 @@ async function loadData() {
     const btnSqlite = document.getElementById('btnSqlite');
     const btnMysql = document.getElementById('btnMysql');
     
-    if (dbTypeData.data === 'sqlite') {
-      // SQLite 选中状态
-      btnSqlite.classList.remove('bg-blue-50', 'text-blue-600', 'border-2', 'border-blue-500');
-      btnSqlite.classList.add('bg-blue-600', 'text-white', 'border-2', 'border-blue-700', 'shadow-lg', 'font-bold');
-      // MySQL 未选中状态
-      btnMysql.classList.remove('bg-orange-600', 'text-white', 'border-2', 'border-orange-700', 'shadow-lg', 'font-bold');
-      btnMysql.classList.add('bg-orange-50', 'text-orange-600', 'border-2', 'border-orange-500');
-    } else {
-      // MySQL 选中状态
-      btnMysql.classList.remove('bg-orange-50', 'text-orange-600', 'border-2', 'border-orange-500');
-      btnMysql.classList.add('bg-orange-600', 'text-white', 'border-2', 'border-orange-700', 'shadow-lg', 'font-bold');
-      // SQLite 未选中状态
-      btnSqlite.classList.remove('bg-blue-600', 'text-white', 'border-2', 'border-blue-700', 'shadow-lg', 'font-bold');
-      btnSqlite.classList.add('bg-blue-50', 'text-blue-600', 'border-2', 'border-blue-500');
+    if (btnSqlite && btnMysql) {
+      if (dbTypeData.data === 'sqlite') {
+        btnSqlite.classList.remove('bg-blue-50', 'text-blue-600', 'border-2', 'border-blue-500');
+        btnSqlite.classList.add('bg-blue-600', 'text-white', 'border-2', 'border-blue-700', 'shadow-lg', 'font-bold');
+        btnMysql.classList.remove('bg-orange-600', 'text-white', 'border-2', 'border-orange-700', 'shadow-lg', 'font-bold');
+        btnMysql.classList.add('bg-orange-50', 'text-orange-600', 'border-2', 'border-orange-500');
+      } else {
+        btnMysql.classList.remove('bg-orange-50', 'text-orange-600', 'border-2', 'border-orange-500');
+        btnMysql.classList.add('bg-orange-600', 'text-white', 'border-2', 'border-orange-700', 'shadow-lg', 'font-bold');
+        btnSqlite.classList.remove('bg-blue-600', 'text-white', 'border-2', 'border-blue-700', 'shadow-lg', 'font-bold');
+        btnSqlite.classList.add('bg-blue-50', 'text-blue-600', 'border-2', 'border-blue-500');
+      }
     }
   }
 }
