@@ -723,34 +723,23 @@ function copyContentByIndex(index, type, articleId) {
 
     const articleElement = document.querySelector(`[onclick="copyContentByIndex(${index}, '${type}', ${articleId})"]`).closest('.p-4');
     if (articleElement) {
-      const statusElement = articleElement.querySelector('.bg-blue-100');
+      const statusElement = articleElement.querySelector('.text-xs.rounded-full');
       if (statusElement) {
-        const currentStatus = statusElement.textContent.trim();
+        const titleCopied = type === 'title' || statusElement.textContent.includes('已复制标题') || statusElement.textContent.includes('已全部复制');
+        const normalContentCopied = type === 'normalContent' || statusElement.textContent.includes('已复制普通内容') || statusElement.textContent.includes('已全部复制');
+        const payContentCopied = type === 'payContent' || statusElement.textContent.includes('已复制付费内容') || statusElement.textContent.includes('已全部复制');
+        const allCopied = titleCopied && normalContentCopied && payContentCopied;
+
         let newStatus = '';
-
-        if (type === 'title') {
-          if (currentStatus.includes('已复制普通内容') && currentStatus.includes('已复制付费内容')) {
-            newStatus = '已全部复制';
-          } else {
-            newStatus = '已复制标题';
-          }
-        } else if (type === 'normalContent') {
-          if (currentStatus.includes('已复制标题') && currentStatus.includes('已复制付费内容')) {
-            newStatus = '已全部复制';
-          } else {
-            newStatus = '已复制普通内容';
-          }
-        } else if (type === 'payContent') {
-          if (currentStatus.includes('已复制标题') && currentStatus.includes('已复制普通内容')) {
-            newStatus = '已全部复制';
-          } else {
-            newStatus = '已复制付费内容';
-          }
+        if (allCopied) {
+          newStatus = '已发布';
+          statusElement.className = 'px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full';
+        } else {
+          newStatus = '未发布';
+          statusElement.className = 'px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full';
         }
 
-        if (newStatus) {
-          statusElement.textContent = newStatus;
-        }
+        statusElement.textContent = newStatus;
       }
     }
 
@@ -763,16 +752,12 @@ function copyContentByIndex(index, type, articleId) {
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          setTimeout(() => {
-            loadData();
-          }, 300);
+          // 不触发 loadData，只更新本地状态显示
         }
       })
       .catch(err => {
         console.error('更新复制状态失败:', err);
-        setTimeout(() => {
-          loadData();
-        }, 300);
+        // 不触发 loadData，只更新本地状态显示
       });
     }
   }).catch(err => {
@@ -787,34 +772,23 @@ function copyContentByIndex(index, type, articleId) {
 
       const articleElement = document.querySelector(`[onclick="copyContentByIndex(${index}, '${type}', ${articleId})"]`).closest('.p-4');
       if (articleElement) {
-        const statusElement = articleElement.querySelector('.bg-blue-100');
+        const statusElement = articleElement.querySelector('.text-xs.rounded-full');
         if (statusElement) {
-          const currentStatus = statusElement.textContent.trim();
+          const titleCopied = type === 'title' || statusElement.textContent.includes('已复制标题') || statusElement.textContent.includes('已全部复制');
+          const normalContentCopied = type === 'normalContent' || statusElement.textContent.includes('已复制普通内容') || statusElement.textContent.includes('已全部复制');
+          const payContentCopied = type === 'payContent' || statusElement.textContent.includes('已复制付费内容') || statusElement.textContent.includes('已全部复制');
+          const allCopied = titleCopied && normalContentCopied && payContentCopied;
+
           let newStatus = '';
-
-          if (type === 'title') {
-            if (currentStatus.includes('已复制普通内容') && currentStatus.includes('已复制付费内容')) {
-              newStatus = '已全部复制';
-            } else {
-              newStatus = '已复制标题';
-            }
-          } else if (type === 'normalContent') {
-            if (currentStatus.includes('已复制标题') && currentStatus.includes('已复制付费内容')) {
-              newStatus = '已全部复制';
-            } else {
-              newStatus = '已复制普通内容';
-            }
-          } else if (type === 'payContent') {
-            if (currentStatus.includes('已复制标题') && currentStatus.includes('已复制普通内容')) {
-              newStatus = '已全部复制';
-            } else {
-              newStatus = '已复制付费内容';
-            }
+          if (allCopied) {
+            newStatus = '已发布';
+            statusElement.className = 'px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full';
+          } else {
+            newStatus = '未发布';
+            statusElement.className = 'px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full';
           }
 
-          if (newStatus) {
-            statusElement.textContent = newStatus;
-          }
+          statusElement.textContent = newStatus;
         }
       }
 
@@ -827,22 +801,19 @@ function copyContentByIndex(index, type, articleId) {
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            setTimeout(() => {
-              loadData();
-            }, 300);
+            // 不触发 loadData，只更新本地状态显示
           }
         })
         .catch(err => {
           console.error('更新复制状态失败:', err);
-          setTimeout(() => {
-            loadData();
-          }, 300);
+          // 不触发 loadData，只更新本地状态显示
         });
       }
     } catch (err) {
-      showCopyNotification('复制失败，请手动复制', 'error');
+      showNotification('复制失败，请手动复制', 'error');
+    } finally {
+      document.body.removeChild(textarea);
     }
-    document.body.removeChild(textarea);
   });
 }
 
