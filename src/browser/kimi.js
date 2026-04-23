@@ -2,11 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { insertGengContent } = require('../database/dbManager');
 const { newPage } = require('./browserManager');
-
-function randomDelay(min, max) {
-  const delay = Math.floor(Math.random() * (max - min + 1)) + min;
-  return new Promise(resolve => setTimeout(resolve, delay));
-}
+const { randomDelay, waitForInputAndFill, sendMessage } = require('../utils');
 
 async function readTemplate(fileName) {
   const filePath = path.join(__dirname, '../../Tips', fileName);
@@ -17,16 +13,15 @@ function splitGengContent(content) {
   const groups = [];
   const regex = /【第(\d+)组】[\s\S]*?(?=【第(\d+)组】|$)/g;
   let match;
-  
+
   while ((match = regex.exec(content)) !== null) {
     let groupContent = match[0].trim();
-    // 移除【第x组】前缀
     groupContent = groupContent.replace(/^【第\d+组】\s*/, '');
     if (groupContent) {
       groups.push(groupContent);
     }
   }
-  
+
   return groups;
 }
 
@@ -43,47 +38,16 @@ async function searchGeng(workName, cpName) {
     page = await newPage();
 
     console.log('正在加载页面...');
-    await page.goto('https://www.kimi.com/zh/', { 
+    await page.goto('https://www.kimi.com/zh/', {
       waitUntil: 'domcontentloaded',
-      timeout: 90000 
+      timeout: 90000
     });
 
     console.log('等待页面加载稳定（4~6秒）...');
     await randomDelay(4000, 6000);
 
-    console.log('等待输入框元素...');
-    await page.waitForSelector('textarea, [contenteditable="true"]', { timeout: 30000 });
-
-    const textarea = await page.$('textarea');
-    const contentEditable = await page.$('[contenteditable="true"]');
-
-    let inputElement;
-    if (textarea) {
-      inputElement = textarea;
-    } else if (contentEditable) {
-      inputElement = contentEditable;
-    }
-
-    if (!inputElement) {
-      throw new Error('未找到输入框');
-    }
-
-    console.log('点击输入框...');
-    await inputElement.click();
-
-    console.log('正在粘贴提示词...');
-    await inputElement.fill(prompt);
-
-    console.log('等待发送（4~5秒）...');
-    await randomDelay(4000, 5000);
-
-    console.log('点击发送按钮...');
-    const sendButton = await page.$('button:has-text("发送"), button[type="submit"]');
-    if (sendButton) {
-      await sendButton.click();
-    } else {
-      await page.keyboard.press('Enter');
-    }
+    await waitForInputAndFill(page, prompt);
+    await sendMessage(page, { sendDelay: [4000, 5000] });
 
     console.log('等待 Kimi 生成内容...');
 

@@ -4,7 +4,6 @@ let currentGengPage = 1;
 let currentArticlePage = 1;
 const pageSize = 3;
 
-let gengContentMap = {};
 let allWorkCpItems = [];
 let allGengContent = [];
 let allArticles = [];
@@ -395,16 +394,6 @@ function changePage(page) {
   renderWorkCpList(allWorkCpItems);
 }
 
-function getStatusBadge(status) {
-  switch(status) {
-    case 'completed':
-      return '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">已完成</span>';
-    case 'pending':
-    default:
-      return '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">待生成</span>';
-  }
-}
-
 function renderGengContentList(items) {
   const container = document.getElementById('gengContentList');
 
@@ -416,7 +405,7 @@ function renderGengContentList(items) {
     return;
   }
 
-  gengContentMap = {};
+  GengActions.setGengContentMap(items);
 
   const start = (currentGengPage - 1) * pageSize;
   const end = start + pageSize;
@@ -425,35 +414,15 @@ function renderGengContentList(items) {
   const totalPages = Math.ceil(items.length / pageSize);
 
   let html = currentItems.map(item => {
-    gengContentMap[item.id] = item.geng_text;
-
     return `
     <div class="p-4 border border-gray-100 rounded-lg hover:border-gray-200 transition-colors">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-sm font-medium text-blue-600">${escapeHtml(item.work_name)} / ${escapeHtml(item.cp_name)} / ${getStatusBadge(item.status)}</span>
+        <span class="text-sm font-medium text-blue-600">${escapeHtml(item.work_name)} / ${escapeHtml(item.cp_name)} / ${GengActions.getStatusBadge(item)}</span>
         <div class="flex items-center gap-2">
-          <button 
-            data-id="${item.id}"
-            onclick="viewGengContentBtn(this)"
-            class="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded hover:bg-blue-200 transition-colors"
-          >
-            查看
-          </button>
-          <button 
-            onclick="generateSingleArticle(${item.id})"
-            class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
-          >
-            生成文章
-          </button>
-          <button 
-            onclick="deleteGengContent(${item.id})"
-            class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
-          >
-            删除
-          </button>
+          ${GengActions.getItemButtonsHtml(item)}
         </div>
       </div>
-      <div class="text-sm text-gray-700 line-clamp-3">${escapeHtml(item.geng_text)}</div>
+      <div class="text-sm text-gray-700 line-clamp-2">${escapeHtml(item.geng_text)}</div>
     </div>
   `;
   }).join('');
@@ -546,29 +515,10 @@ function renderArticleList(items) {
     const actualIndex = start + index;
     const content = item.article_content || '';
 
-    const titleMatch = content.match(/^(.*?)\s*-\s*/);
-    const title = titleMatch ? titleMatch[1] : '';
-
-    const afterDash = titleMatch ? content.substring(titleMatch[0].length) : content;
-    const payPointIndex = afterDash.indexOf('【付费卡点】\u200b');
-
-    let normalContent = '';
-    let payContent = '';
-
-    if (payPointIndex > -1) {
-      normalContent = afterDash.substring(0, payPointIndex).trim();
-      payContent = afterDash.substring(payPointIndex + '【付费卡点】\u200b'.length).trim();
-    } else {
-      normalContent = afterDash.trim();
-      payContent = '';
-    }
+    const extracted = ArticleActions.extractArticleContent(content);
 
     window.articleContents = window.articleContents || [];
-    window.articleContents[actualIndex] = {
-      title: title,
-      normalContent: normalContent,
-      payContent: payContent
-    };
+    window.articleContents[actualIndex] = extracted;
 
     const articleId = item.id;
     const titleCopied = item.title_copied === 1;
@@ -576,7 +526,7 @@ function renderArticleList(items) {
     const payContentCopied = item.pay_content_copied === 1;
     const allCopied = titleCopied && normalContentCopied && payContentCopied;
 
-    const hasPayPoint = content.includes('【付费卡点】\u200b');
+    const hasPayPoint = content.includes('【付费卡点】') || content.includes('【付费卡点】\u200b');
 
     let statusText = '';
 
@@ -593,31 +543,31 @@ function renderArticleList(items) {
         <div class="flex items-center justify-between mb-2">
           <span class="text-sm font-medium text-green-600">${escapeHtml(item.work_name)} / ${escapeHtml(item.cp_name)} / <span class="px-2 py-0.5 ${hasPayPoint ? (allCopied ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700') : 'bg-red-100 text-red-700'} text-xs rounded-full">${statusText}</span></span>
           <div class="flex items-center gap-2">
-            <button 
+            <button
               onclick="copyContentByIndex(${actualIndex}, 'title', ${articleId})"
               class="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded hover:bg-blue-200 transition-colors"
             >
               标题
             </button>
-            <button 
+            <button
               onclick="copyContentByIndex(${actualIndex}, 'normalContent', ${articleId})"
               class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
             >
               普通内容
             </button>
-            <button 
+            <button
               onclick="copyContentByIndex(${actualIndex}, 'payContent', ${articleId})"
               class="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded hover:bg-purple-200 transition-colors"
             >
               付费内容
             </button>
-            <button 
+            <button
               onclick="viewArticleContent(${actualIndex})"
               class="px-2 py-1 bg-indigo-100 text-indigo-600 text-xs rounded hover:bg-indigo-200 transition-colors"
             >
               查看
             </button>
-            <button 
+            <button
               onclick="deleteArticle(${item.id})"
               class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
             >
@@ -710,36 +660,23 @@ async function filterArticleContent(resetPage = true) {
 }
 
 function copyContentByIndex(index, type, articleId) {
-  const articleContents = window.articleContents || [];
-  const content = articleContents[index]?.[type];
-
-  if (!content) {
-    showNotification('内容为空', 'error');
-    return;
-  }
-
-  navigator.clipboard.writeText(content).then(() => {
-    showNotification('复制成功！', 'success');
-
+  const updateCallback = function(type, articleId) {
     const articleElement = document.querySelector(`[onclick="copyContentByIndex(${index}, '${type}', ${articleId})"]`).closest('.p-4');
     if (articleElement) {
       const statusElement = articleElement.querySelector('.text-xs.rounded-full');
       if (statusElement) {
-        const titleCopied = type === 'title' || statusElement.textContent.includes('已复制标题') || statusElement.textContent.includes('已全部复制');
-        const normalContentCopied = type === 'normalContent' || statusElement.textContent.includes('已复制普通内容') || statusElement.textContent.includes('已全部复制');
-        const payContentCopied = type === 'payContent' || statusElement.textContent.includes('已复制付费内容') || statusElement.textContent.includes('已全部复制');
+        const titleCopied = type === 'title' || statusElement.textContent.includes('已发布');
+        const normalContentCopied = type === 'normalContent' || statusElement.textContent.includes('已发布');
+        const payContentCopied = type === 'payContent' || statusElement.textContent.includes('已发布');
         const allCopied = titleCopied && normalContentCopied && payContentCopied;
 
-        let newStatus = '';
         if (allCopied) {
-          newStatus = '已发布';
           statusElement.className = 'px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full';
+          statusElement.textContent = '已发布';
         } else {
-          newStatus = '未发布';
           statusElement.className = 'px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full';
+          statusElement.textContent = '未发布';
         }
-
-        statusElement.textContent = newStatus;
       }
     }
 
@@ -757,64 +694,11 @@ function copyContentByIndex(index, type, articleId) {
       })
       .catch(err => {
         console.error('更新复制状态失败:', err);
-        // 不触发 loadData，只更新本地状态显示
       });
     }
-  }).catch(err => {
-    console.error('复制失败:', err);
-    const textarea = document.createElement('textarea');
-    textarea.value = content;
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-      document.execCommand('copy');
-      showNotification('复制成功！', 'success');
+  };
 
-      const articleElement = document.querySelector(`[onclick="copyContentByIndex(${index}, '${type}', ${articleId})"]`).closest('.p-4');
-      if (articleElement) {
-        const statusElement = articleElement.querySelector('.text-xs.rounded-full');
-        if (statusElement) {
-          const titleCopied = type === 'title' || statusElement.textContent.includes('已复制标题') || statusElement.textContent.includes('已全部复制');
-          const normalContentCopied = type === 'normalContent' || statusElement.textContent.includes('已复制普通内容') || statusElement.textContent.includes('已全部复制');
-          const payContentCopied = type === 'payContent' || statusElement.textContent.includes('已复制付费内容') || statusElement.textContent.includes('已全部复制');
-          const allCopied = titleCopied && normalContentCopied && payContentCopied;
-
-          let newStatus = '';
-          if (allCopied) {
-            newStatus = '已发布';
-            statusElement.className = 'px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full';
-          } else {
-            newStatus = '未发布';
-            statusElement.className = 'px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full';
-          }
-
-          statusElement.textContent = newStatus;
-        }
-      }
-
-      if (articleId) {
-        fetch(`/api/articles/${articleId}/copy-status`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: type })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            // 不触发 loadData，只更新本地状态显示
-          }
-        })
-        .catch(err => {
-          console.error('更新复制状态失败:', err);
-          // 不触发 loadData，只更新本地状态显示
-        });
-      }
-    } catch (err) {
-      showNotification('复制失败，请手动复制', 'error');
-    } finally {
-      document.body.removeChild(textarea);
-    }
-  });
+  ArticleActions.copyContentByIndex(index, type, articleId, updateCallback);
 }
 
 function showCopyNotification(message, type = 'success') {
@@ -859,33 +743,8 @@ function viewGengContent(id, text) {
   modal.classList.remove('hidden');
 }
 
-function viewGengContentBtn(btn) {
-  const id = btn.dataset.id;
-  const text = gengContentMap[id] || '';
-  viewGengContent(id, text);
-}
-
 function viewArticleContent(index) {
-  const articleContents = window.articleContents || [];
-  const content = articleContents[index];
-  if (!content) return;
-
-  const modal = document.getElementById('articleContentModal');
-  const modalContent = document.getElementById('articleContentText');
-
-  let fullText = '';
-  if (content.title) {
-    fullText += '【标题】\n' + content.title + '\n\n';
-  }
-  if (content.normalContent) {
-    fullText += '【普通内容】\n' + content.normalContent + '\n\n';
-  }
-  if (content.payContent) {
-    fullText += '【付费内容】\n' + content.payContent;
-  }
-
-  modalContent.textContent = fullText;
-  modal.classList.remove('hidden');
+  ArticleActions.viewArticleContent(index);
 }
 
 function closeModal(modalId) {

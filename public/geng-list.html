@@ -4,22 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>梗内容列表 - 自动化搜梗+生文工具</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#3B82F6',
-            success: '#10B981',
-            danger: '#EF4444',
-            warning: '#F59E0B',
-          }
-        }
-      }
-    }
-  </script>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/output.css">
   <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -103,6 +88,7 @@
     </div>
   </div>
 
+  <script src="/js/gengActions.js"></script>
   <script>
     const pageSize = 10;
     let currentPage = 1;
@@ -200,37 +186,20 @@
         return;
       }
 
+      GengActions.setGengContentMap(allGeng);
+
       const html = pageData.map(item => `
         <div class="flex items-start justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-2">
-              <span class="px-2 py-1 text-xs rounded ${item.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
-                ${item.status === 'completed' ? '已完成' : '待生成'}
-              </span>
+              ${GengActions.getStatusBadge(item)}
               <span class="text-sm text-gray-500">${escapeHtml(item.work_name)} / ${escapeHtml(item.cp_name)}</span>
             </div>
             <div class="text-sm text-gray-700 line-clamp-2">${escapeHtml(item.geng_text)}</div>
             <div class="text-xs text-gray-400 mt-2">创建时间: ${item.created_at || '未知'}</div>
           </div>
           <div class="flex items-center gap-2 ml-4">
-            <button
-              onclick="viewGengContent(${item.id})"
-              class="px-3 py-1 bg-blue-100 text-blue-600 text-xs rounded hover:bg-blue-200 transition-colors"
-            >
-              查看
-            </button>
-            <button
-              onclick="generateSingleArticle(${item.id})"
-              class="px-3 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
-            >
-              生成文章
-            </button>
-            <button
-              onclick="deleteGeng(${item.id})"
-              class="px-3 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
-            >
-              删除
-            </button>
+            ${GengActions.getItemButtonsHtml(item)}
           </div>
         </div>
       `).join('');
@@ -302,26 +271,6 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    async function deleteGeng(id) {
-      if (!confirm('确定要删除这条记录吗？')) return;
-
-      try {
-        const response = await fetch(`/api/geng-content/${id}`, {
-          method: 'DELETE'
-        });
-        const data = await response.json();
-
-        if (data.success) {
-          showNotification('删除成功', 'success');
-          await loadGengList();
-        } else {
-          showNotification('删除失败: ' + data.message, 'error');
-        }
-      } catch (error) {
-        showNotification('删除失败: ' + error.message, 'error');
-      }
-    }
-
     function escapeHtml(text) {
       if (!text) return '';
       const div = document.createElement('div');
@@ -329,73 +278,20 @@
       return div.innerHTML;
     }
 
-    function showNotification(message, type = 'success') {
-      const notification = document.createElement('div');
-      notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-y-0 opacity-100 ${
-        type === 'success' ? 'bg-green-500 text-white' :
-        type === 'error' ? 'bg-red-500 text-white' :
-        type === 'info' ? 'bg-blue-500 text-white' :
-        'bg-gray-500 text-white'
-      }`;
-      notification.textContent = message;
-
-      document.body.appendChild(notification);
-
-      setTimeout(() => {
-        notification.classList.add('translate-y-[-20px]', 'opacity-0');
-      }, 3000);
-
-      setTimeout(() => {
-        if (notification.parentNode) {
-          document.body.removeChild(notification);
-        }
-      }, 3500);
-    }
-
-    let isProcessing = false;
-
-    async function generateSingleArticle(gengId) {
-      if (isProcessing) {
-        showNotification('正在处理中，请稍后', 'error');
-        return;
-      }
-
-      isProcessing = true;
-
-      try {
-        const response = await fetch('/api/generate-single-article', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ gengId })
-        });
-        const data = await response.json();
-
-        if (data.success) {
-          showNotification('文章生成成功', 'success');
-          await loadGengList();
-        } else {
-          showNotification('生成失败: ' + data.message, 'error');
-        }
-      } catch (error) {
-        showNotification('生成失败: ' + error.message, 'error');
-      } finally {
-        isProcessing = false;
-      }
-    }
-
     function viewGengContent(id) {
-      const gengItem = allGeng.find(item => item.id === id);
-      if (!gengItem) return;
-
-      const modal = document.getElementById('gengContentModal');
-      const modalContent = document.getElementById('gengContentText');
-      modalContent.textContent = gengItem.geng_text;
-      modal.classList.remove('hidden');
+      GengActions.viewGengContent(id);
     }
 
     function closeGengContentModal() {
-      const modal = document.getElementById('gengContentModal');
-      modal.classList.add('hidden');
+      GengActions.closeGengContentModal();
+    }
+
+    async function generateSingleArticle(gengId) {
+      await GengActions.generateSingleArticle(gengId, loadGengList);
+    }
+
+    async function deleteGeng(id) {
+      await GengActions.deleteGeng(id, loadGengList);
     }
 
     document.addEventListener('DOMContentLoaded', async function() {
