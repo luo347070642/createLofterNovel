@@ -45,7 +45,7 @@ async function initDatabase() {
   
   await execute(`
     CREATE TABLE IF NOT EXISTS work_cp (
-      id INT PRIMARY KEY AUTO_INCREMENT,
+      id VARCHAR(20) PRIMARY KEY,
       work_name VARCHAR(255) NOT NULL,
       cp_name VARCHAR(255) NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -55,7 +55,7 @@ async function initDatabase() {
 
   await execute(`
     CREATE TABLE IF NOT EXISTS geng_content (
-      id INT PRIMARY KEY AUTO_INCREMENT,
+      id VARCHAR(20) PRIMARY KEY,
       work_name VARCHAR(255) NOT NULL,
       cp_name VARCHAR(255) NOT NULL,
       geng_text LONGTEXT NOT NULL,
@@ -70,7 +70,7 @@ async function initDatabase() {
 
   await execute(`
     CREATE TABLE IF NOT EXISTS articles (
-      id INT PRIMARY KEY AUTO_INCREMENT,
+      id VARCHAR(20) PRIMARY KEY,
       work_name VARCHAR(255) NOT NULL,
       cp_name VARCHAR(255) NOT NULL,
       prompt_text LONGTEXT NOT NULL,
@@ -115,11 +115,19 @@ async function getWorkCpCount() {
   return rows[0]?.count || 0;
 }
 
-async function insertGengContent(workName, cpName, gengText, promptText) {
-  const result = await execute(
-    'INSERT INTO geng_content (work_name, cp_name, geng_text, prompt_text) VALUES (?, ?, ?, ?)',
-    [workName, cpName, gengText, promptText]
-  );
+async function insertGengContent(workName, cpName, gengText, promptText, id = null) {
+  let result;
+  if (id !== null) {
+    result = await execute(
+      'INSERT INTO geng_content (id, work_name, cp_name, geng_text, prompt_text) VALUES (?, ?, ?, ?, ?)',
+      [id, workName, cpName, gengText, promptText]
+    );
+  } else {
+    result = await execute(
+      'INSERT INTO geng_content (work_name, cp_name, geng_text, prompt_text) VALUES (?, ?, ?, ?)',
+      [workName, cpName, gengText, promptText]
+    );
+  }
   return result.insertId;
 }
 
@@ -153,11 +161,19 @@ async function updateGengStatus(id, status) {
   return result.affectedRows;
 }
 
-async function insertArticle(workName, cpName, promptText, articleContent) {
-  const result = await execute(
-    'INSERT INTO articles (work_name, cp_name, prompt_text, article_content) VALUES (?, ?, ?, ?)',
-    [workName, cpName, promptText, articleContent]
-  );
+async function insertArticle(workName, cpName, promptText, articleContent, id = null) {
+  let result;
+  if (id !== null) {
+    result = await execute(
+      'INSERT INTO articles (id, work_name, cp_name, prompt_text, article_content) VALUES (?, ?, ?, ?, ?)',
+      [id, workName, cpName, promptText, articleContent]
+    );
+  } else {
+    result = await execute(
+      'INSERT INTO articles (work_name, cp_name, prompt_text, article_content) VALUES (?, ?, ?, ?)',
+      [workName, cpName, promptText, articleContent]
+    );
+  }
   return result.insertId;
 }
 

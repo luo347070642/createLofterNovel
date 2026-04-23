@@ -23,7 +23,7 @@ async function initDatabase() {
   return new Promise((resolve, reject) => {
     const createWorkCpTable = `
       CREATE TABLE IF NOT EXISTS work_cp (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT PRIMARY KEY,
         work_name TEXT NOT NULL,
         cp_name TEXT NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -33,7 +33,7 @@ async function initDatabase() {
 
     const createGengTable = `
       CREATE TABLE IF NOT EXISTS geng_content (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT PRIMARY KEY,
         work_name TEXT NOT NULL,
         cp_name TEXT NOT NULL,
         geng_text TEXT NOT NULL,
@@ -45,7 +45,7 @@ async function initDatabase() {
 
     const createArticleTable = `
       CREATE TABLE IF NOT EXISTS articles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT PRIMARY KEY,
         work_name TEXT NOT NULL,
         cp_name TEXT NOT NULL,
         prompt_text TEXT NOT NULL,
@@ -144,7 +144,7 @@ async function insertWorkCp(workName, cpName, id = null) {
       if (err) {
         reject(err);
       } else {
-        resolve(this.lastID);
+        resolve(id !== null ? id : this.lastID);
       }
     });
   });
@@ -176,14 +176,23 @@ async function deleteWorkCp(id) {
   });
 }
 
-async function insertGengContent(workName, cpName, gengText, promptText) {
+async function insertGengContent(workName, cpName, gengText, promptText, id = null) {
   return new Promise((resolve, reject) => {
-    const stmt = db.prepare(`
-      INSERT INTO geng_content (work_name, cp_name, geng_text, prompt_text)
-      VALUES (?, ?, ?, ?)
-    `);
+    let stmt;
+    if (id !== null) {
+      stmt = db.prepare(`
+        INSERT INTO geng_content (id, work_name, cp_name, geng_text, prompt_text)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+    } else {
+      stmt = db.prepare(`
+        INSERT INTO geng_content (work_name, cp_name, geng_text, prompt_text)
+        VALUES (?, ?, ?, ?)
+      `);
+    }
     
-    stmt.run([workName, cpName, gengText, promptText], function(err) {
+    const params = id !== null ? [id, workName, cpName, gengText, promptText] : [workName, cpName, gengText, promptText];
+    stmt.run(params, function(err) {
       stmt.finalize();
       if (err) {
         reject(err);
@@ -288,14 +297,23 @@ async function updateArticleCopyStatus(id, type) {
   });
 }
 
-async function insertArticle(workName, cpName, promptText, articleContent) {
+async function insertArticle(workName, cpName, promptText, articleContent, id = null) {
   return new Promise((resolve, reject) => {
-    const stmt = db.prepare(`
-      INSERT INTO articles (work_name, cp_name, prompt_text, article_content)
-      VALUES (?, ?, ?, ?)
-    `);
+    let stmt;
+    if (id !== null) {
+      stmt = db.prepare(`
+        INSERT INTO articles (id, work_name, cp_name, prompt_text, article_content)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+    } else {
+      stmt = db.prepare(`
+        INSERT INTO articles (work_name, cp_name, prompt_text, article_content)
+        VALUES (?, ?, ?, ?)
+      `);
+    }
     
-    stmt.run([workName, cpName, promptText, articleContent], function(err) {
+    const params = id !== null ? [id, workName, cpName, promptText, articleContent] : [workName, cpName, promptText, articleContent];
+    stmt.run(params, function(err) {
       stmt.finalize();
       if (err) {
         reject(err);
