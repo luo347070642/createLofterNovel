@@ -4,12 +4,14 @@ const {
   deleteWorkCp,
   getWorkCpCount
 } = require('../database/dbManager');
+const { generateWorkCpId } = require('../utils/idGenerator');
 
 async function addWorkCp(workName, cpName) {
   if (!workName || !cpName) {
     throw new Error('作品名和CP名不能为空');
   }
-  const id = await insertWorkCp(workName, cpName);
+  const id = await generateWorkCpId();
+  await insertWorkCp(workName, cpName, id);
   return { id, message: '添加成功' };
 }
 

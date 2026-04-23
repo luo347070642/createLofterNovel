@@ -5,6 +5,7 @@ const {
   getGengCount,
   insertGengContent
 } = require('../database/dbManager');
+const { generateGengContentId } = require('../utils/idGenerator');
 
 async function getGengContentList() {
   return await getAllGengContent();
@@ -28,7 +29,9 @@ async function countGengContent() {
 }
 
 async function saveGengContent(workName, cpName, gengText, promptText) {
-  return await insertGengContent(workName, cpName, gengText, promptText);
+  const id = await generateGengContentId();
+  await insertGengContent(workName, cpName, gengText, promptText, id);
+  return id;
 }
 
 module.exports = {

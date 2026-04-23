@@ -27,8 +27,8 @@ async function initDatabase() {
   return await getCurrentDb().initDatabase();
 }
 
-async function insertWorkCp(workName, cpName) {
-  return await getCurrentDb().insertWorkCp(workName, cpName);
+async function insertWorkCp(workName, cpName, id = null) {
+  return await getCurrentDb().insertWorkCp(workName, cpName, id);
 }
 
 async function getAllWorkCp() {
@@ -43,8 +43,8 @@ async function getWorkCpCount() {
   return await getCurrentDb().getWorkCpCount();
 }
 
-async function insertGengContent(workName, cpName, gengText, promptText) {
-  return await getCurrentDb().insertGengContent(workName, cpName, gengText, promptText);
+async function insertGengContent(workName, cpName, gengText, promptText, id = null) {
+  return await getCurrentDb().insertGengContent(workName, cpName, gengText, promptText, id);
 }
 
 async function getAllGengContent() {
@@ -67,8 +67,8 @@ async function updateGengStatus(id, status) {
   return await getCurrentDb().updateGengStatus(id, status);
 }
 
-async function insertArticle(workName, cpName, promptText, articleContent) {
-  return await getCurrentDb().insertArticle(workName, cpName, promptText, articleContent);
+async function insertArticle(workName, cpName, promptText, articleContent, id = null) {
+  return await getCurrentDb().insertArticle(workName, cpName, promptText, articleContent, id);
 }
 
 async function getAllArticles() {
@@ -144,20 +144,16 @@ async function syncFromMysql() {
     console.log(`从 MySQL 获取到 ${mysqlWorkCp.length} 个 work_cp 记录`);
     console.log(`从 SQLite 获取到 ${sqliteWorkCp.length} 个 work_cp 记录`);
     
-    // 创建映射：使用 work_name + cp_name 作为键
+    // 创建映射：使用ID作为键
     const mysqlWorkCpMap = new Map();
     const sqliteWorkCpMap = new Map();
-    const sqliteWorkCpIdMap = new Map();
     
     for (const item of mysqlWorkCp) {
-      const key = getWorkCpKey(item.work_name, item.cp_name);
-      mysqlWorkCpMap.set(key, item);
+      mysqlWorkCpMap.set(item.id, item);
     }
     
     for (const item of sqliteWorkCp) {
-      const key = getWorkCpKey(item.work_name, item.cp_name);
-      sqliteWorkCpMap.set(key, item);
-      sqliteWorkCpIdMap.set(item.id, item);
+      sqliteWorkCpMap.set(item.id, item);
     }
     
     // 同步 work_cp
@@ -165,11 +161,11 @@ async function syncFromMysql() {
     let workCpUpdated = 0;
     let workCpDeleted = 0;
     
-    // 新增或更新
-    for (const [key, item] of mysqlWorkCpMap) {
-      if (!sqliteWorkCpMap.has(key)) {
+    // 新增或更新：使用MySQL的数据为准
+    for (const [id, item] of mysqlWorkCpMap) {
+      if (!sqliteWorkCpMap.has(id)) {
         try {
-          await sqliteDb.insertWorkCp(item.work_name, item.cp_name);
+          await sqliteDb.insertWorkCp(item.work_name, item.cp_name, item.id);
           workCpAdded++;
         } catch (error) {
           console.log('插入 work_cp 到 SQLite 时出错:', error.message);
@@ -178,8 +174,8 @@ async function syncFromMysql() {
     }
     
     // 删除：SQLite中有但MySQL中没有的记录
-    for (const [key, item] of sqliteWorkCpMap) {
-      if (!mysqlWorkCpMap.has(key)) {
+    for (const [id, item] of sqliteWorkCpMap) {
+      if (!mysqlWorkCpMap.has(id)) {
         try {
           await sqliteDb.deleteWorkCp(item.id);
           workCpDeleted++;
@@ -385,18 +381,16 @@ async function syncToMysql() {
     console.log(`从 SQLite 获取到 ${sqliteWorkCp.length} 个 work_cp 记录`);
     console.log(`从 MySQL 获取到 ${mysqlWorkCp.length} 个 work_cp 记录`);
     
-    // 创建映射：使用 work_name + cp_name 作为键
+    // 创建映射：使用ID作为键
     const sqliteWorkCpMap = new Map();
     const mysqlWorkCpMap = new Map();
     
     for (const item of sqliteWorkCp) {
-      const key = getWorkCpKey(item.work_name, item.cp_name);
-      sqliteWorkCpMap.set(key, item);
+      sqliteWorkCpMap.set(item.id, item);
     }
     
     for (const item of mysqlWorkCp) {
-      const key = getWorkCpKey(item.work_name, item.cp_name);
-      mysqlWorkCpMap.set(key, item);
+      mysqlWorkCpMap.set(item.id, item);
     }
     
     // 同步 work_cp
@@ -404,11 +398,11 @@ async function syncToMysql() {
     let workCpUpdated = 0;
     let workCpDeleted = 0;
     
-    // 新增
-    for (const [key, item] of sqliteWorkCpMap) {
-      if (!mysqlWorkCpMap.has(key)) {
+    // 新增：使用SQLite的ID保持一致
+    for (const [id, item] of sqliteWorkCpMap) {
+      if (!mysqlWorkCpMap.has(id)) {
         try {
-          await mysqlDb.insertWorkCp(item.work_name, item.cp_name);
+          await mysqlDb.insertWorkCp(item.work_name, item.cp_name, item.id);
           workCpAdded++;
         } catch (error) {
           console.log('插入 work_cp 到 MySQL 时出错:', error.message);
@@ -417,8 +411,8 @@ async function syncToMysql() {
     }
     
     // 删除：MySQL中有但SQLite中没有的记录
-    for (const [key, item] of mysqlWorkCpMap) {
-      if (!sqliteWorkCpMap.has(key)) {
+    for (const [id, item] of mysqlWorkCpMap) {
+      if (!sqliteWorkCpMap.has(id)) {
         try {
           await mysqlDb.deleteWorkCp(item.id);
           workCpDeleted++;
