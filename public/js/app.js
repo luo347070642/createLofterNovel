@@ -355,7 +355,8 @@ function renderWorkCpList(items) {
           搜梗
         </button>
         <button 
-          onclick="deleteWorkCp(${item.id})"
+          data-id="${escapeHtml(item.id)}"
+          onclick="deleteWorkCp(this.dataset.id)"
           class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-sm rounded-lg transition-colors"
         >
           删除
@@ -568,7 +569,8 @@ function renderArticleList(items) {
               查看
             </button>
             <button
-              onclick="deleteArticle(${item.id})"
+              data-id="${item.id}"
+              onclick="deleteArticle(this.dataset.id)"
               class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
             >
               删除
@@ -811,6 +813,46 @@ function showNotification(message, type = 'success') {
   }, 3500);
 }
 
+function showConfirm(message, onConfirm, onCancel) {
+  // 创建确认对话框
+  const confirmDialog = document.createElement('div');
+  confirmDialog.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  confirmDialog.innerHTML = `
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+      <div class="text-lg font-medium text-gray-900 mb-4">确认操作</div>
+      <div class="text-gray-600 mb-6">${message}</div>
+      <div class="flex justify-end gap-3">
+        <button id="confirmCancel" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors">取消</button>
+        <button id="confirmOk" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">确认</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(confirmDialog);
+  
+  // 绑定事件
+  const cancelBtn = confirmDialog.querySelector('#confirmCancel');
+  const okBtn = confirmDialog.querySelector('#confirmOk');
+  
+  cancelBtn.addEventListener('click', () => {
+    document.body.removeChild(confirmDialog);
+    if (onCancel) onCancel();
+  });
+  
+  okBtn.addEventListener('click', () => {
+    document.body.removeChild(confirmDialog);
+    if (onConfirm) onConfirm();
+  });
+  
+  // 点击背景关闭
+  confirmDialog.addEventListener('click', (e) => {
+    if (e.target === confirmDialog) {
+      document.body.removeChild(confirmDialog);
+      if (onCancel) onCancel();
+    }
+  });
+}
+
 async function switchDatabase(type) {
   const btnSqlite = document.getElementById('btnSqlite');
   const btnMysql = document.getElementById('btnMysql');
@@ -959,7 +1001,5 @@ async function loadData() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('DOMContentLoaded fired');
-  console.log('页面加载完成');
   loadData();
 });

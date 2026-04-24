@@ -11,7 +11,7 @@ let doubaoPage = null;
 async function closeEdgeBrowser() {
   return new Promise((resolve) => {
     exec('taskkill /F /IM msedge.exe', (error) => {
-      if (error && !error.message.includes('找不到')) {
+      if (error && !error.message.includes('not found') && !error.message.includes('找不到')) {
         console.log('关闭 Edge 浏览器时出现警告:', error.message);
       }
       resolve();

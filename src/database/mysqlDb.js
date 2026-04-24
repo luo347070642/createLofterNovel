@@ -45,7 +45,7 @@ async function initDatabase() {
   
   await execute(`
     CREATE TABLE IF NOT EXISTS work_cp (
-      id VARCHAR(20) PRIMARY KEY,
+      id VARCHAR(32) PRIMARY KEY,
       work_name VARCHAR(255) NOT NULL,
       cp_name VARCHAR(255) NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -55,7 +55,7 @@ async function initDatabase() {
 
   await execute(`
     CREATE TABLE IF NOT EXISTS geng_content (
-      id VARCHAR(20) PRIMARY KEY,
+      id VARCHAR(32) PRIMARY KEY,
       work_name VARCHAR(255) NOT NULL,
       cp_name VARCHAR(255) NOT NULL,
       geng_text LONGTEXT NOT NULL,
@@ -70,7 +70,7 @@ async function initDatabase() {
 
   await execute(`
     CREATE TABLE IF NOT EXISTS articles (
-      id VARCHAR(20) PRIMARY KEY,
+      id VARCHAR(32) PRIMARY KEY,
       work_name VARCHAR(255) NOT NULL,
       cp_name VARCHAR(255) NOT NULL,
       prompt_text LONGTEXT NOT NULL,
@@ -102,7 +102,7 @@ async function insertWorkCp(workName, cpName, id = null) {
 }
 
 async function getAllWorkCp() {
-  return await query('SELECT * FROM work_cp ORDER BY id DESC');
+  return await query('SELECT * FROM work_cp ORDER BY created_at DESC');
 }
 
 async function deleteWorkCp(id) {
@@ -128,15 +128,15 @@ async function insertGengContent(workName, cpName, gengText, promptText, id = nu
       [workName, cpName, gengText, promptText]
     );
   }
-  return result.insertId;
+  return id !== null ? id : result.insertId;
 }
 
 async function getAllGengContent() {
-  return await query('SELECT * FROM geng_content ORDER BY id DESC');
+  return await query('SELECT * FROM geng_content ORDER BY created_at DESC');
 }
 
 async function getGengContentByWork(workName, cpName) {
-  return await query('SELECT * FROM geng_content WHERE work_name = ? AND cp_name = ? ORDER BY id DESC', [workName, cpName]);
+  return await query('SELECT * FROM geng_content WHERE work_name = ? AND cp_name = ? ORDER BY created_at DESC', [workName, cpName]);
 }
 
 async function deleteGengContent(id) {
@@ -174,15 +174,15 @@ async function insertArticle(workName, cpName, promptText, articleContent, id = 
       [workName, cpName, promptText, articleContent]
     );
   }
-  return result.insertId;
+  return id !== null ? id : result.insertId;
 }
 
 async function getAllArticles() {
-  return await query('SELECT * FROM articles ORDER BY id DESC');
+  return await query('SELECT * FROM articles ORDER BY created_at DESC');
 }
 
 async function getArticlesByWork(workName, cpName) {
-  return await query('SELECT * FROM articles WHERE work_name = ? AND cp_name = ? ORDER BY id DESC', [workName, cpName]);
+  return await query('SELECT * FROM articles WHERE work_name = ? AND cp_name = ? ORDER BY created_at DESC', [workName, cpName]);
 }
 
 async function deleteArticle(id) {

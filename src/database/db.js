@@ -97,7 +97,6 @@ async function initDatabase() {
           console.log('创建 articles 表失败:', err.message);
         }
         
-        // 检查并添加 articles 表的复制状态字段
         db.run('PRAGMA table_info(articles)', (err, rows) => {
           const columns = [];
           db.all('PRAGMA table_info(articles)', (err, cols) => {
@@ -152,7 +151,7 @@ async function insertWorkCp(workName, cpName, id = null) {
 
 async function getAllWorkCp() {
   return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM work_cp ORDER BY id DESC', (err, rows) => {
+    db.all('SELECT * FROM work_cp ORDER BY created_at DESC', (err, rows) => {
       if (err) {
         reject(err);
       } else {
@@ -197,7 +196,7 @@ async function insertGengContent(workName, cpName, gengText, promptText, id = nu
       if (err) {
         reject(err);
       } else {
-        resolve(this.lastID);
+        resolve(id !== null ? id : this.lastID);
       }
     });
   });
@@ -205,7 +204,7 @@ async function insertGengContent(workName, cpName, gengText, promptText, id = nu
 
 async function getAllGengContent() {
   return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM geng_content ORDER BY id DESC', (err, rows) => {
+    db.all('SELECT * FROM geng_content ORDER BY created_at DESC', (err, rows) => {
       if (err) {
         reject(err);
       } else {
@@ -217,7 +216,7 @@ async function getAllGengContent() {
 
 async function getGengContentByWork(workName, cpName) {
   return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM geng_content WHERE work_name = ? AND cp_name = ? ORDER BY id DESC', [workName, cpName], (err, rows) => {
+    db.all('SELECT * FROM geng_content WHERE work_name = ? AND cp_name = ? ORDER BY created_at DESC', [workName, cpName], (err, rows) => {
       if (err) {
         reject(err);
       } else {
@@ -318,7 +317,7 @@ async function insertArticle(workName, cpName, promptText, articleContent, id = 
       if (err) {
         reject(err);
       } else {
-        resolve(this.lastID);
+        resolve(id !== null ? id : this.lastID);
       }
     });
   });
@@ -326,7 +325,7 @@ async function insertArticle(workName, cpName, promptText, articleContent, id = 
 
 async function getAllArticles() {
   return new Promise((resolve, reject) => {
-    db.all('SELECT id, work_name, cp_name, prompt_text, article_content, title_copied, normal_content_copied, pay_content_copied, created_at FROM articles ORDER BY id DESC', (err, rows) => {
+    db.all('SELECT id, work_name, cp_name, prompt_text, article_content, title_copied, normal_content_copied, pay_content_copied, created_at FROM articles ORDER BY created_at DESC', (err, rows) => {
       if (err) {
         reject(err);
       } else {
@@ -338,7 +337,7 @@ async function getAllArticles() {
 
 async function getArticlesByWork(workName, cpName) {
   return new Promise((resolve, reject) => {
-    db.all('SELECT id, work_name, cp_name, prompt_text, article_content, title_copied, normal_content_copied, pay_content_copied, created_at FROM articles WHERE work_name = ? AND cp_name = ? ORDER BY id DESC', [workName, cpName], (err, rows) => {
+    db.all('SELECT id, work_name, cp_name, prompt_text, article_content, title_copied, normal_content_copied, pay_content_copied, created_at FROM articles WHERE work_name = ? AND cp_name = ? ORDER BY created_at DESC', [workName, cpName], (err, rows) => {
       if (err) {
         reject(err);
       } else {

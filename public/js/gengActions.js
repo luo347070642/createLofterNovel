@@ -2,28 +2,19 @@ const GengActions = {
   gengContentMap: new Map(),
 
   setGengContentMap(items) {
-    console.log('setGengContentMap called with', items.length, 'items');
     this.gengContentMap.clear();
     items.forEach(item => {
-      const id = parseInt(item.id, 10);
+      const id = item.id; // 保持原始ID类型（TEXT）
       this.gengContentMap.set(id, item.geng_text);
-      console.log('Set GengContentMap:', id, item.geng_text?.substring(0, 50));
     });
-    console.log('gengContentMap size:', this.gengContentMap.size);
   },
 
   getGengContent(id) {
-    const numericId = parseInt(id, 10);
-    console.log('getGengContent called with id:', id, '-> numeric:', numericId);
-    console.log('gengContentMap has this id?', this.gengContentMap.has(numericId));
-    console.log('gengContentMap size:', this.gengContentMap.size);
-    return this.gengContentMap.get(numericId) || '';
+    return this.gengContentMap.get(id) || '';
   },
 
   viewGengContent(id) {
-    console.log('viewGengContent called with id:', id);
     const text = this.getGengContent(id);
-    console.log('text:', text?.substring(0, 100));
     if (!text) {
       if (window.showNotification) {
         window.showNotification('未找到梗内容', 'error');
@@ -32,14 +23,15 @@ const GengActions = {
     }
 
     const modal = document.getElementById('gengContentModal');
-    const modalContent = document.getElementById('gengContentText');
-    modalContent.textContent = text;
-    modal.classList.remove('hidden');
+    const content = document.getElementById('gengContentText');
+    if (modal && content) {
+      content.textContent = text;
+      modal.classList.remove('hidden');
+    }
   },
 
   viewGengContentBtn(btn) {
-    const id = parseInt(btn.dataset.id, 10);
-    console.log('viewGengContentBtn, id:', id, 'type:', typeof id);
+    const id = btn.dataset.id; // 保持原始ID类型（TEXT）
     this.viewGengContent(id);
   },
 
@@ -64,7 +56,7 @@ const GengActions = {
       const response = await fetch('/api/generate-single-article', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gengId })
+        body: JSON.stringify({ gengId }) // 保持原始ID类型
       });
       const data = await response.json();
 
@@ -90,31 +82,31 @@ const GengActions = {
   },
 
   async deleteGeng(id, reloadCallback) {
-    if (!confirm('确定要删除这条记录吗？')) return;
+    showConfirm('确定要删除这条记录吗？', async () => {
+      try {
+        const response = await fetch(`/api/geng-content/${id}`, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
 
-    try {
-      const response = await fetch(`/api/geng-content/${id}`, {
-        method: 'DELETE'
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        if (window.showNotification) {
-          window.showNotification('删除成功', 'success');
+        if (data.success) {
+          if (window.showNotification) {
+            window.showNotification('删除成功', 'success');
+          }
+          if (reloadCallback) {
+            await reloadCallback();
+          }
+        } else {
+          if (window.showNotification) {
+            window.showNotification('删除失败: ' + data.message, 'error');
+          }
         }
-        if (reloadCallback) {
-          await reloadCallback();
-        }
-      } else {
+      } catch (error) {
         if (window.showNotification) {
-          window.showNotification('删除失败: ' + data.message, 'error');
+          window.showNotification('删除失败: ' + error.message, 'error');
         }
       }
-    } catch (error) {
-      if (window.showNotification) {
-        window.showNotification('删除失败: ' + error.message, 'error');
-      }
-    }
+    });
   },
 
   getStatusBadge(item) {
@@ -125,23 +117,17 @@ const GengActions = {
     }
   },
 
-  getItemButtonsHtml(item) {
+  getItemButtonsHtml(item, reloadCallback) {
+    const id = item.id;
     return `
       <button
-        data-id="${item.id}"
-        onclick="GengActions.viewGengContentBtn(this)"
-        class="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded hover:bg-blue-200 transition-colors"
-      >
-        查看
-      </button>
-      <button
-        onclick="GengActions.generateSingleArticle(${item.id})"
+        onclick="GengActions.generateSingleArticle('${id}', ${reloadCallback ? '() => loadGengContent()' : 'null'})"
         class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
       >
         生成文章
       </button>
       <button
-        onclick="GengActions.deleteGeng(${item.id})"
+        onclick="GengActions.deleteGeng('${id}', ${reloadCallback ? '() => loadGengContent()' : 'null'})"
         class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
       >
         删除

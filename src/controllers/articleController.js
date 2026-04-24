@@ -79,8 +79,11 @@ async function generateSingle(req, res) {
     console.log(`开始生成单篇文章，梗ID: ${gengId}`);
 
     const geng = await articleService.getGengById(gengId);
+    if (!geng) {
+      throw new Error('未找到梗内容记录');
+    }
     const articleContent = await generateArticle(geng);
-    await articleService.saveArticle(geng.work_name, geng.cp_name, geng.prompt_text, articleContent);
+    await articleService.saveArticle(geng.work_name, geng.cp_name, geng.prompt_text, articleContent, gengId);
     await articleService.markGengCompleted(gengId);
 
     console.log(`单篇文章生成成功，梗ID: ${gengId}`);

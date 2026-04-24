@@ -1,3 +1,5 @@
+const { generateId } = require('../utils/idGenerator');
+
 let currentDb = null;
 let dbType = 'sqlite';
 
@@ -44,6 +46,9 @@ async function getWorkCpCount() {
 }
 
 async function insertGengContent(workName, cpName, gengText, promptText, id = null) {
+  if (id === null) {
+    id = generateId();
+  }
   return await getCurrentDb().insertGengContent(workName, cpName, gengText, promptText, id);
 }
 
@@ -68,6 +73,9 @@ async function updateGengStatus(id, status) {
 }
 
 async function insertArticle(workName, cpName, promptText, articleContent, id = null) {
+  if (id === null) {
+    id = generateId();
+  }
   return await getCurrentDb().insertArticle(workName, cpName, promptText, articleContent, id);
 }
 
@@ -449,7 +457,7 @@ async function syncToMysql() {
     for (const [id, item] of sqliteGengContentMap) {
       if (!mysqlGengContentMap.has(id)) {
         try {
-          await mysqlDb.insertGengContent(item.work_name, item.cp_name, item.geng_text, item.prompt_text);
+          await mysqlDb.insertGengContent(item.work_name, item.cp_name, item.geng_text, item.prompt_text, item.id);
           if (item.status) {
             await mysqlDb.updateGengStatus(item.id, item.status);
           }
@@ -510,7 +518,7 @@ async function syncToMysql() {
     for (const [id, item] of sqliteArticlesMap) {
       if (!mysqlArticlesMap.has(id)) {
         try {
-          await mysqlDb.insertArticle(item.work_name, item.cp_name, item.prompt_text, item.article_content);
+          await mysqlDb.insertArticle(item.work_name, item.cp_name, item.prompt_text, item.article_content, item.id);
           // 更新复制状态
           if (item.title_copied) {
             await mysqlDb.updateArticleCopyStatus(item.id, 'title');

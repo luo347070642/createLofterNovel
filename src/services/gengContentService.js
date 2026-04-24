@@ -5,7 +5,7 @@ const {
   getGengCount,
   insertGengContent
 } = require('../database/dbManager');
-const { generateGengContentId } = require('../utils/idGenerator');
+const { generateId } = require('../utils/idGenerator');
 
 async function getGengContentList() {
   return await getAllGengContent();
@@ -29,7 +29,7 @@ async function countGengContent() {
 }
 
 async function saveGengContent(workName, cpName, gengText, promptText) {
-  const id = await generateGengContentId();
+  const id = generateId();
   await insertGengContent(workName, cpName, gengText, promptText, id);
   return id;
 }

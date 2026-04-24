@@ -91,11 +91,12 @@
             <div class="text-xs text-gray-400 mt-1">创建时间: ${item.created_at || '未知'}</div>
           </div>
           <button
-            onclick="deleteWorkCp(${item.id})"
-            class="ml-4 px-3 py-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-          >
-            删除
-          </button>
+              data-id="${escapeHtml(item.id)}"
+              onclick="deleteWorkCp(this.dataset.id)"
+              class="ml-4 px-3 py-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+            >
+              删除
+            </button>
         </div>
       `).join('');
 
@@ -167,23 +168,23 @@
     }
 
     async function deleteWorkCp(id) {
-      if (!confirm('确定要删除这条记录吗？')) return;
+      showConfirm('确定要删除这条记录吗？', async () => {
+        try {
+          const response = await fetch(`/api/work-cp/${id}`, {
+            method: 'DELETE'
+          });
+          const data = await response.json();
 
-      try {
-        const response = await fetch(`/api/work-cp/${id}`, {
-          method: 'DELETE'
-        });
-        const data = await response.json();
-
-        if (data.success) {
-          alert('删除成功');
-          await loadWorkCpList();
-        } else {
-          alert('删除失败: ' + data.message);
+          if (data.success) {
+            alert('删除成功');
+            await loadWorkCpList();
+          } else {
+            alert('删除失败: ' + data.message);
+          }
+        } catch (error) {
+          alert('删除失败: ' + error.message);
         }
-      } catch (error) {
-        alert('删除失败: ' + error.message);
-      }
+      });
     }
 
     function escapeHtml(text) {

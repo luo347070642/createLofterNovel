@@ -10,7 +10,7 @@ const {
   getGengById,
   updateArticleContent
 } = require('../database/dbManager');
-const { generateArticleId } = require('../utils/idGenerator');
+const { generateId } = require('../utils/idGenerator');
 
 async function getArticleList() {
   return await getAllArticles();
@@ -39,10 +39,10 @@ async function countArticles() {
   return await getArticleCount();
 }
 
-async function saveArticle(workName, cpName, promptText, articleContent) {
-  const id = await generateArticleId();
-  await insertArticle(workName, cpName, promptText, articleContent, id);
-  return id;
+async function saveArticle(workName, cpName, promptText, articleContent, id = null) {
+  const articleId = id || generateId();
+  await insertArticle(workName, cpName, promptText, articleContent, articleId);
+  return articleId;
 }
 
 async function markGengCompleted(gengId) {

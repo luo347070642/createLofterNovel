@@ -52,7 +52,7 @@ async function searchGeng(workName, cpName) {
     console.log('等待 Kimi 生成内容...');
 
     const checkInterval = 2000;
-    const maxTotalWaitTime = 150 * 1000;
+    const maxTotalWaitTime = 10 * 60 * 1000; // 10分钟
     const stableThreshold = 5;
     let totalWaitTime = 0;
     let lastLogTime = 0;
@@ -209,28 +209,10 @@ async function searchGeng(workName, cpName) {
 
     console.log(`已将 ${gengGroups.length} 条梗存入数据库`);
 
-    const closeDelay = 2000 + Math.random() * 2000;
-    console.log(`等待 ${Math.round(closeDelay / 1000)} 秒后关闭标签页...`);
-    await page.waitForTimeout(closeDelay);
-    
-    await page.close();
-    console.log('标签页已关闭');
-
     return gengGroups.length;
     
   } catch (error) {
     console.error('搜梗过程中发生错误:', error.message);
-    if (page) {
-      try {
-        const closeDelay = 2000 + Math.random() * 2000;
-        console.log(`等待 ${Math.round(closeDelay / 1000)} 秒后关闭标签页...`);
-        await page.waitForTimeout(closeDelay);
-        await page.close();
-        console.log('标签页已关闭');
-      } catch (e) {
-        console.log('关闭标签页时出现错误:', e.message);
-      }
-    }
     throw error;
   }
 }

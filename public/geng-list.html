@@ -186,10 +186,11 @@
         return;
       }
 
-      GengActions.setGengContentMap(allGeng);
+      GengActions.setGengContentMap(filteredGeng);
 
       const html = pageData.map(item => `
-        <div class="flex items-start justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+        <div class="flex items-start justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+             onclick="GengActions.viewGengContent('${item.id}')">
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-2">
               ${GengActions.getStatusBadge(item)}
@@ -198,8 +199,8 @@
             <div class="text-sm text-gray-700 line-clamp-2">${escapeHtml(item.geng_text)}</div>
             <div class="text-xs text-gray-400 mt-2">创建时间: ${item.created_at || '未知'}</div>
           </div>
-          <div class="flex items-center gap-2 ml-4">
-            ${GengActions.getItemButtonsHtml(item)}
+        <div class="flex items-center gap-2 ml-4">
+            ${GengActions.getItemButtonsHtml(item, () => loadGengContent())}
           </div>
         </div>
       `).join('');

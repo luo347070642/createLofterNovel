@@ -36,7 +36,6 @@ const ArticleActions = {
     const content = articleContents[index]?.[type];
 
     if (!content || content.trim() === '') {
-      console.log('内容为空或格式不正确:', { type, content });
       if (window.showNotification) {
         window.showNotification('内容为空或格式不正确', 'error');
       }
@@ -65,7 +64,6 @@ const ArticleActions = {
         }
       }
     } catch (err) {
-      console.error('复制失败:', err);
       if (window.showNotification) {
         window.showNotification('复制失败，请手动复制', 'error');
       }
@@ -95,7 +93,6 @@ const ArticleActions = {
     const articleContents = window.articleContents || [];
 
     if (index < 0 || index >= articleContents.length) {
-      console.log('索引越界:', index, '总长度:', articleContents.length);
       if (window.showNotification) {
         window.showNotification('内容索引错误', 'error');
       }
@@ -105,7 +102,6 @@ const ArticleActions = {
     const content = articleContents[index];
 
     if (!content) {
-      console.log('内容为空:', content);
       if (window.showNotification) {
         window.showNotification('内容为空', 'error');
       }
@@ -146,12 +142,10 @@ const ArticleActions = {
       })
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
-          console.log('更新复制状态成功');
-        }
+        // 静默处理成功
       })
       .catch(err => {
-        console.error('更新复制状态失败:', err);
+        // 静默处理错误
       });
     }
   },
@@ -171,19 +165,19 @@ const ArticleActions = {
     const articleId = item.id;
     return `
       <button
-        onclick="ArticleActions.copyContentByIndex(${actualIndex}, 'title', ${articleId}, ArticleActions.getUpdateCallback(${actualIndex}, ${articleId}))"
+        onclick="ArticleActions.copyContentByIndex(${actualIndex}, 'title', '${articleId}', ArticleActions.getUpdateCallback(${actualIndex}, '${articleId}'))"
         class="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded hover:bg-blue-200 transition-colors"
       >
         标题
       </button>
       <button
-        onclick="ArticleActions.copyContentByIndex(${actualIndex}, 'normalContent', ${articleId}, ArticleActions.getUpdateCallback(${actualIndex}, ${articleId}))"
+        onclick="ArticleActions.copyContentByIndex(${actualIndex}, 'normalContent', '${articleId}', ArticleActions.getUpdateCallback(${actualIndex}, '${articleId}'))"
         class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
       >
         普通内容
       </button>
       <button
-        onclick="ArticleActions.copyContentByIndex(${actualIndex}, 'payContent', ${articleId}, ArticleActions.getUpdateCallback(${actualIndex}, ${articleId}))"
+        onclick="ArticleActions.copyContentByIndex(${actualIndex}, 'payContent', '${articleId}', ArticleActions.getUpdateCallback(${actualIndex}, '${articleId}'))"
         class="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded hover:bg-purple-200 transition-colors"
       >
         付费内容
