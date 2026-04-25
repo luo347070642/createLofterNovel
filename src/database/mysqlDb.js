@@ -148,6 +148,10 @@ async function clearGengContent() {
   await execute('DELETE FROM geng_content');
 }
 
+async function clearArticles() {
+  await execute('DELETE FROM articles');
+}
+
 async function getGengCount() {
   const rows = await query('SELECT COUNT(*) as count FROM geng_content');
   return rows[0]?.count || 0;
@@ -269,6 +273,7 @@ module.exports = {
   getGengContentByWork,
   deleteGengContent,
   clearGengContent,
+  clearArticles,
   getGengCount,
   updateGengStatus,
   getCompletedGeng,

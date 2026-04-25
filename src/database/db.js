@@ -1,8 +1,18 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
 const DB_PATH = path.join(__dirname, '../../data/data.db');
 
+// 确保data目录存在
+const dataDir = path.dirname(DB_PATH);
+if (!fs.existsSync(dataDir)) {
+  console.log('创建data目录...');
+  fs.mkdirSync(dataDir, { recursive: true });
+  console.log('data目录创建成功');
+}
+
+// 确保db文件存在（sqlite3会自动创建）
 let db = null;
 
 function openDatabase() {
@@ -252,6 +262,18 @@ async function clearGengContent() {
   });
 }
 
+async function clearArticles() {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM articles', (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
 async function updateGengStatus(id, status) {
   return new Promise((resolve, reject) => {
     const stmt = db.prepare('UPDATE geng_content SET status = ? WHERE id = ?');
@@ -483,6 +505,7 @@ module.exports = {
   getGengContentByWork,
   deleteGengContent,
   clearGengContent,
+  clearArticles,
   getGengCount,
   updateGengStatus,
   getCompletedGeng,

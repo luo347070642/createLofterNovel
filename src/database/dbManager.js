@@ -133,7 +133,7 @@ function getWorkCpKey(workName, cpName) {
 
 // 数据同步功能
 async function syncFromMysql() {
-  console.log('开始从 MySQL 同步数据到 SQLite...');
+  console.log('开始从 MySQL 同步数据到 SQLite（全量同步）...');
   
   try {
     // 保存当前数据库类型
@@ -146,201 +146,68 @@ async function syncFromMysql() {
     useDatabase('sqlite');
     await initDatabase();
     
-    // 同步 work_cp 表
+    // 先清空 SQLite 的所有表（实现全量同步）
+    console.log('清空 SQLite 表...');
+    await sqliteDb.clearGengContent();
+    await sqliteDb.clearArticles();
+    // 清空 work_cp 需要先获取所有 work_cp 再删除（因为没有 clearWorkCp 函数）
+    const allWorkCp = await sqliteDb.getAllWorkCp();
+    for (const item of allWorkCp) {
+      await sqliteDb.deleteWorkCp(item.id);
+    }
+    console.log('SQLite 表已清空');
+    
+    // 从 MySQL 获取所有数据
     const mysqlWorkCp = await mysqlDb.getAllWorkCp();
-    const sqliteWorkCp = await sqliteDb.getAllWorkCp();
+    const mysqlGengContent = await mysqlDb.getAllGengContent();
+    const mysqlArticles = await mysqlDb.getAllArticles();
     console.log(`从 MySQL 获取到 ${mysqlWorkCp.length} 个 work_cp 记录`);
-    console.log(`从 SQLite 获取到 ${sqliteWorkCp.length} 个 work_cp 记录`);
-    
-    // 创建映射：使用ID作为键，确保id为字符串类型
-    const mysqlWorkCpMap = new Map();
-    const sqliteWorkCpMap = new Map();
-    
-    for (const item of mysqlWorkCp) {
-      mysqlWorkCpMap.set(String(item.id), item);
-    }
-    
-    for (const item of sqliteWorkCp) {
-      sqliteWorkCpMap.set(String(item.id), item);
-    }
+    console.log(`从 MySQL 获取到 ${mysqlGengContent.length} 个 geng_content 记录`);
+    console.log(`从 MySQL 获取到 ${mysqlArticles.length} 个 articles 记录`);
     
     // 同步 work_cp
     let workCpAdded = 0;
-    let workCpUpdated = 0;
-    let workCpDeleted = 0;
-    
-    // 新增或更新：使用MySQL的数据为准
-    for (const [id, item] of mysqlWorkCpMap) {
-      if (!sqliteWorkCpMap.has(id)) {
-        try {
-          await sqliteDb.insertWorkCp(item.work_name, item.cp_name, item.id);
-          workCpAdded++;
-        } catch (error) {
-          console.log('插入 work_cp 到 SQLite 时出错:', error.message);
-        }
+    for (const item of mysqlWorkCp) {
+      try {
+        await sqliteDb.insertWorkCp(item.work_name, item.cp_name, item.id);
+        workCpAdded++;
+      } catch (error) {
+        console.log('插入 work_cp 到 SQLite 时出错:', error.message);
       }
-    }
-    
-    // 删除：SQLite中有但MySQL中没有的记录
-    for (const [id, item] of sqliteWorkCpMap) {
-      if (!mysqlWorkCpMap.has(id)) {
-        try {
-          await sqliteDb.deleteWorkCp(item.id);
-          workCpDeleted++;
-        } catch (error) {
-          console.log('删除 work_cp 时出错:', error.message);
-        }
-      }
-    }
-    
-    // 同步 geng_content 表
-    const mysqlGengContent = await mysqlDb.getAllGengContent();
-    const sqliteGengContent = await sqliteDb.getAllGengContent();
-    console.log(`从 MySQL 获取到 ${mysqlGengContent.length} 个 geng_content 记录`);
-    console.log(`从 SQLite 获取到 ${sqliteGengContent.length} 个 geng_content 记录`);
-    
-    // 创建映射，确保id为字符串类型
-    const mysqlGengContentMap = new Map();
-    const sqliteGengContentMap = new Map();
-    
-    for (const item of mysqlGengContent) {
-      mysqlGengContentMap.set(String(item.id), item);
-    }
-    
-    for (const item of sqliteGengContent) {
-      sqliteGengContentMap.set(String(item.id), item);
     }
     
     // 同步 geng_content
     let gengContentAdded = 0;
-    let gengContentUpdated = 0;
-    let gengContentDeleted = 0;
-    
-    // 新增或更新
-    for (const [id, item] of mysqlGengContentMap) {
-      if (!sqliteGengContentMap.has(id)) {
-        try {
-          await sqliteDb.insertGengContent(item.work_name, item.cp_name, item.geng_text, item.prompt_text, item.id);
-          if (item.status) {
-            await sqliteDb.updateGengStatus(item.id, item.status);
-          }
-          gengContentAdded++;
-        } catch (error) {
-          console.log('插入 geng_content 到 SQLite 时出错:', error.message);
+    for (const item of mysqlGengContent) {
+      try {
+        await sqliteDb.insertGengContent(item.work_name, item.cp_name, item.geng_text, item.prompt_text, item.id);
+        if (item.status) {
+          await sqliteDb.updateGengStatus(item.id, item.status);
         }
-      } else {
-        // 检查是否需要更新
-        const existingItem = sqliteGengContentMap.get(id);
-        if (existingItem.status !== item.status) {
-          try {
-            await sqliteDb.updateGengStatus(id, item.status);
-            gengContentUpdated++;
-          } catch (error) {
-            console.log('更新 geng_content 状态时出错:', error.message);
-          }
-        }
+        gengContentAdded++;
+      } catch (error) {
+        console.log('插入 geng_content 到 SQLite 时出错:', error.message);
       }
-    }
-    
-    // 删除
-    for (const [id, item] of sqliteGengContentMap) {
-      if (!mysqlGengContentMap.has(id)) {
-        try {
-          await sqliteDb.deleteGengContent(id);
-          gengContentDeleted++;
-        } catch (error) {
-          console.log('删除 geng_content 时出错:', error.message);
-        }
-      }
-    }
-    
-    // 同步 articles 表
-    const mysqlArticles = await mysqlDb.getAllArticles();
-    const sqliteArticles = await sqliteDb.getAllArticles();
-    console.log(`从 MySQL 获取到 ${mysqlArticles.length} 个 articles 记录`);
-    console.log(`从 SQLite 获取到 ${sqliteArticles.length} 个 articles 记录`);
-    
-    // 创建映射，确保id为字符串类型
-    const mysqlArticlesMap = new Map();
-    const sqliteArticlesMap = new Map();
-    
-    for (const item of mysqlArticles) {
-      mysqlArticlesMap.set(String(item.id), item);
-    }
-    
-    for (const item of sqliteArticles) {
-      sqliteArticlesMap.set(String(item.id), item);
     }
     
     // 同步 articles
     let articlesAdded = 0;
-    let articlesUpdated = 0;
-    let articlesDeleted = 0;
-    
-    // 新增或更新
-    for (const [id, item] of mysqlArticlesMap) {
-      if (!sqliteArticlesMap.has(id)) {
-        try {
-          await sqliteDb.insertArticle(item.work_name, item.cp_name, item.prompt_text, item.article_content, item.id);
-          // 更新复制状态
-          if (item.title_copied) {
-            await sqliteDb.updateArticleCopyStatus(item.id, 'title');
-          }
-          if (item.normal_content_copied) {
-            await sqliteDb.updateArticleCopyStatus(item.id, 'normalContent');
-          }
-          if (item.pay_content_copied) {
-            await sqliteDb.updateArticleCopyStatus(item.id, 'payContent');
-          }
-          articlesAdded++;
-        } catch (error) {
-          console.log('插入 articles 到 SQLite 时出错:', error.message);
+    for (const item of mysqlArticles) {
+      try {
+        await sqliteDb.insertArticle(item.work_name, item.cp_name, item.prompt_text, item.article_content, item.id);
+        // 更新复制状态
+        if (item.title_copied) {
+          await sqliteDb.updateArticleCopyStatus(item.id, 'title');
         }
-      } else {
-        // 检查是否需要更新
-        const existingItem = sqliteArticlesMap.get(id);
-        let updated = false;
-        
-        if (existingItem.title_copied !== item.title_copied) {
-          try {
-            await sqliteDb.updateArticleCopyStatus(id, 'title');
-            updated = true;
-          } catch (error) {
-            console.log('更新 articles title 状态时出错:', error.message);
-          }
+        if (item.normal_content_copied) {
+          await sqliteDb.updateArticleCopyStatus(item.id, 'normalContent');
         }
-        if (existingItem.normal_content_copied !== item.normal_content_copied) {
-          try {
-            await sqliteDb.updateArticleCopyStatus(id, 'normalContent');
-            updated = true;
-          } catch (error) {
-            console.log('更新 articles normalContent 状态时出错:', error.message);
-          }
+        if (item.pay_content_copied) {
+          await sqliteDb.updateArticleCopyStatus(item.id, 'payContent');
         }
-        if (existingItem.pay_content_copied !== item.pay_content_copied) {
-          try {
-            await sqliteDb.updateArticleCopyStatus(id, 'payContent');
-            updated = true;
-          } catch (error) {
-            console.log('更新 articles payContent 状态时出错:', error.message);
-          }
-        }
-        
-        if (updated) {
-          articlesUpdated++;
-        }
-      }
-    }
-    
-    // 删除
-    for (const [id, item] of sqliteArticlesMap) {
-      if (!mysqlArticlesMap.has(id)) {
-        try {
-          await sqliteDb.deleteArticle(id);
-          articlesDeleted++;
-        } catch (error) {
-          console.log('删除 articles 时出错:', error.message);
-        }
+        articlesAdded++;
+      } catch (error) {
+        console.log('插入 articles 到 SQLite 时出错:', error.message);
       }
     }
     
@@ -353,14 +220,14 @@ async function syncFromMysql() {
       message: '数据同步成功',
       stats: {
         workCpAdded,
-        workCpUpdated,
-        workCpDeleted,
+        workCpUpdated: 0,
+        workCpDeleted: 0,
         gengContentAdded,
-        gengContentUpdated,
-        gengContentDeleted,
+        gengContentUpdated: 0,
+        gengContentDeleted: 0,
         articlesAdded,
-        articlesUpdated,
-        articlesDeleted
+        articlesUpdated: 0,
+        articlesDeleted: 0
       }
     };
   } catch (error) {
