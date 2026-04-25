@@ -220,7 +220,7 @@ async function syncFromMysql() {
     for (const [id, item] of mysqlGengContentMap) {
       if (!sqliteGengContentMap.has(id)) {
         try {
-          await sqliteDb.insertGengContent(item.work_name, item.cp_name, item.geng_text, item.prompt_text);
+          await sqliteDb.insertGengContent(item.work_name, item.cp_name, item.geng_text, item.prompt_text, item.id);
           if (item.status) {
             await sqliteDb.updateGengStatus(item.id, item.status);
           }
@@ -281,7 +281,7 @@ async function syncFromMysql() {
     for (const [id, item] of mysqlArticlesMap) {
       if (!sqliteArticlesMap.has(id)) {
         try {
-          await sqliteDb.insertArticle(item.work_name, item.cp_name, item.prompt_text, item.article_content);
+          await sqliteDb.insertArticle(item.work_name, item.cp_name, item.prompt_text, item.article_content, item.id);
           // 更新复制状态
           if (item.title_copied) {
             await sqliteDb.updateArticleCopyStatus(item.id, 'title');
