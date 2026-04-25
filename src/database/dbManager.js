@@ -152,16 +152,16 @@ async function syncFromMysql() {
     console.log(`从 MySQL 获取到 ${mysqlWorkCp.length} 个 work_cp 记录`);
     console.log(`从 SQLite 获取到 ${sqliteWorkCp.length} 个 work_cp 记录`);
     
-    // 创建映射：使用ID作为键
+    // 创建映射：使用ID作为键，确保id为字符串类型
     const mysqlWorkCpMap = new Map();
     const sqliteWorkCpMap = new Map();
     
     for (const item of mysqlWorkCp) {
-      mysqlWorkCpMap.set(item.id, item);
+      mysqlWorkCpMap.set(String(item.id), item);
     }
     
     for (const item of sqliteWorkCp) {
-      sqliteWorkCpMap.set(item.id, item);
+      sqliteWorkCpMap.set(String(item.id), item);
     }
     
     // 同步 work_cp
@@ -199,16 +199,16 @@ async function syncFromMysql() {
     console.log(`从 MySQL 获取到 ${mysqlGengContent.length} 个 geng_content 记录`);
     console.log(`从 SQLite 获取到 ${sqliteGengContent.length} 个 geng_content 记录`);
     
-    // 创建映射
+    // 创建映射，确保id为字符串类型
     const mysqlGengContentMap = new Map();
     const sqliteGengContentMap = new Map();
     
     for (const item of mysqlGengContent) {
-      mysqlGengContentMap.set(item.id, item);
+      mysqlGengContentMap.set(String(item.id), item);
     }
     
     for (const item of sqliteGengContent) {
-      sqliteGengContentMap.set(item.id, item);
+      sqliteGengContentMap.set(String(item.id), item);
     }
     
     // 同步 geng_content
@@ -260,16 +260,16 @@ async function syncFromMysql() {
     console.log(`从 MySQL 获取到 ${mysqlArticles.length} 个 articles 记录`);
     console.log(`从 SQLite 获取到 ${sqliteArticles.length} 个 articles 记录`);
     
-    // 创建映射
+    // 创建映射，确保id为字符串类型
     const mysqlArticlesMap = new Map();
     const sqliteArticlesMap = new Map();
     
     for (const item of mysqlArticles) {
-      mysqlArticlesMap.set(item.id, item);
+      mysqlArticlesMap.set(String(item.id), item);
     }
     
     for (const item of sqliteArticles) {
-      sqliteArticlesMap.set(item.id, item);
+      sqliteArticlesMap.set(String(item.id), item);
     }
     
     // 同步 articles
@@ -389,16 +389,16 @@ async function syncToMysql() {
     console.log(`从 SQLite 获取到 ${sqliteWorkCp.length} 个 work_cp 记录`);
     console.log(`从 MySQL 获取到 ${mysqlWorkCp.length} 个 work_cp 记录`);
     
-    // 创建映射：使用ID作为键
+    // 创建映射：使用ID作为键，确保id为字符串类型
     const sqliteWorkCpMap = new Map();
     const mysqlWorkCpMap = new Map();
     
     for (const item of sqliteWorkCp) {
-      sqliteWorkCpMap.set(item.id, item);
+      sqliteWorkCpMap.set(String(item.id), item);
     }
     
     for (const item of mysqlWorkCp) {
-      mysqlWorkCpMap.set(item.id, item);
+      mysqlWorkCpMap.set(String(item.id), item);
     }
     
     // 同步 work_cp
@@ -436,16 +436,16 @@ async function syncToMysql() {
     console.log(`从 SQLite 获取到 ${sqliteGengContent.length} 个 geng_content 记录`);
     console.log(`从 MySQL 获取到 ${mysqlGengContent.length} 个 geng_content 记录`);
     
-    // 创建映射
+    // 创建映射，确保id为字符串类型
     const sqliteGengContentMap = new Map();
     const mysqlGengContentMap = new Map();
     
     for (const item of sqliteGengContent) {
-      sqliteGengContentMap.set(item.id, item);
+      sqliteGengContentMap.set(String(item.id), item);
     }
     
     for (const item of mysqlGengContent) {
-      mysqlGengContentMap.set(item.id, item);
+      mysqlGengContentMap.set(String(item.id), item);
     }
     
     // 同步 geng_content
@@ -497,16 +497,16 @@ async function syncToMysql() {
     console.log(`从 SQLite 获取到 ${sqliteArticles.length} 个 articles 记录`);
     console.log(`从 MySQL 获取到 ${mysqlArticles.length} 个 articles 记录`);
     
-    // 创建映射
+    // 创建映射，确保id为字符串类型
     const sqliteArticlesMap = new Map();
     const mysqlArticlesMap = new Map();
     
     for (const item of sqliteArticles) {
-      sqliteArticlesMap.set(item.id, item);
+      sqliteArticlesMap.set(String(item.id), item);
     }
     
     for (const item of mysqlArticles) {
-      mysqlArticlesMap.set(item.id, item);
+      mysqlArticlesMap.set(String(item.id), item);
     }
     
     // 同步 articles
