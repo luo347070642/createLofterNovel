@@ -74,6 +74,9 @@ const ArticleActions = {
 
   updateArticleStatus(articleId, type, statusElement) {
     if (!statusElement) return;
+    
+    // 确保只修改状态元素，不修改按钮
+    if (statusElement.tagName === 'BUTTON') return;
 
     const titleCopied = type === 'title' || statusElement.textContent.includes('已发布');
     const normalContentCopied = type === 'normalContent' || statusElement.textContent.includes('已发布');
@@ -152,43 +155,71 @@ const ArticleActions = {
 
   getUpdateCallback(index, articleId) {
     return function(type, articleId) {
-      const articleElement = document.querySelector(`[onclick="ArticleActions.copyContentByIndex(${index}, '${type}', ${articleId})"]`)?.closest('.p-4');
+      const articleElement = document.querySelector(`.p-4[data-index="${index}"]`) || document.querySelector(`[onclick*="ArticleActions.copyContentByIndex(${index}, '${type}', '${articleId}')"]`)?.closest('.p-4');
       if (articleElement) {
-        const statusElement = articleElement.querySelector('.text-xs.rounded-full, .px-2.py-0.5.text-xs.rounded-full');
+        const statusElement = articleElement.querySelector('.text-xs.rounded, .px-2.py-1.text-xs.rounded');
         ArticleActions.updateArticleStatus(articleId, type, statusElement);
       }
       ArticleActions.updateCopyStatusAPI(articleId, type);
     };
   },
 
-  getArticleButtonsHtml(item, actualIndex) {
+  getItemButtonsHtml(item, actualIndex, reloadCallback) {
     const articleId = item.id;
     return `
       <button
-        onclick="ArticleActions.copyContentByIndex(${actualIndex}, 'title', '${articleId}', ArticleActions.getUpdateCallback(${actualIndex}, '${articleId}'))"
+        onclick="event.stopPropagation(); ArticleActions.copyContentByIndex(${actualIndex}, 'title', '${articleId}', ArticleActions.getUpdateCallback(${actualIndex}, '${articleId}'))"
         class="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded hover:bg-blue-200 transition-colors"
       >
         标题
       </button>
       <button
-        onclick="ArticleActions.copyContentByIndex(${actualIndex}, 'normalContent', '${articleId}', ArticleActions.getUpdateCallback(${actualIndex}, '${articleId}'))"
+        onclick="event.stopPropagation(); ArticleActions.copyContentByIndex(${actualIndex}, 'normalContent', '${articleId}', ArticleActions.getUpdateCallback(${actualIndex}, '${articleId}'))"
         class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
       >
         普通内容
       </button>
       <button
-        onclick="ArticleActions.copyContentByIndex(${actualIndex}, 'payContent', '${articleId}', ArticleActions.getUpdateCallback(${actualIndex}, '${articleId}'))"
+        onclick="event.stopPropagation(); ArticleActions.copyContentByIndex(${actualIndex}, 'payContent', '${articleId}', ArticleActions.getUpdateCallback(${actualIndex}, '${articleId}'))"
         class="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded hover:bg-purple-200 transition-colors"
       >
         付费内容
       </button>
       <button
-        onclick="ArticleActions.viewArticleContent(${actualIndex})"
-        class="px-2 py-1 bg-indigo-100 text-indigo-600 text-xs rounded hover:bg-indigo-200 transition-colors"
+        onclick="event.stopPropagation(); ArticleActions.deleteArticle('${articleId}', ${reloadCallback ? '() => loadArticleList()' : 'null'})"
+        class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
       >
-        查看
+        删除
       </button>
     `;
+  },
+
+  async deleteArticle(id, reloadCallback) {
+    showConfirm('确定要删除这条记录吗？', async () => {
+      try {
+        const response = await fetch(`/api/articles/${id}`, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          if (window.showNotification) {
+            window.showNotification('删除成功', 'success');
+          }
+          if (reloadCallback) {
+            await reloadCallback();
+          }
+        } else {
+          if (window.showNotification) {
+            window.showNotification('删除失败: ' + data.message, 'error');
+          }
+        }
+      } catch (error) {
+        if (window.showNotification) {
+          window.showNotification('删除失败: ' + error.message, 'error');
+        }
+      }
+    });
   },
 
   getStatusBadge(item) {

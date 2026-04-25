@@ -88,6 +88,7 @@
     </div>
   </div>
 
+  <script src="/js/components.js"></script>
   <script src="/js/gengActions.js"></script>
   <script>
     const pageSize = 10;
@@ -190,7 +191,8 @@
 
       const html = pageData.map(item => `
         <div class="flex items-start justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-             onclick="GengActions.viewGengContent('${item.id}')">
+             data-geng-id="${escapeHtml(item.id)}"
+             onclick="GengActions.viewGengContent(this.dataset.gengId)">
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-2">
               ${GengActions.getStatusBadge(item)}

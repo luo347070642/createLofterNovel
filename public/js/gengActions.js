@@ -10,7 +10,21 @@ const GengActions = {
   },
 
   getGengContent(id) {
-    return this.gengContentMap.get(id) || '';
+    // 尝试直接获取
+    if (this.gengContentMap.has(id)) {
+      return this.gengContentMap.get(id);
+    }
+    // 尝试类型转换后获取
+    const idStr = String(id);
+    if (this.gengContentMap.has(idStr)) {
+      return this.gengContentMap.get(idStr);
+    }
+    // 尝试数字类型获取
+    const idNum = Number(id);
+    if (this.gengContentMap.has(idNum)) {
+      return this.gengContentMap.get(idNum);
+    }
+    return '';
   },
 
   viewGengContent(id) {
@@ -121,13 +135,13 @@ const GengActions = {
     const id = item.id;
     return `
       <button
-        onclick="GengActions.generateSingleArticle('${id}', ${reloadCallback ? '() => loadGengContent()' : 'null'})"
+        onclick="event.stopPropagation(); GengActions.generateSingleArticle('${id}', ${reloadCallback ? '() => loadGengContent()' : 'null'})"
         class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
       >
         生成文章
       </button>
       <button
-        onclick="GengActions.deleteGeng('${id}', ${reloadCallback ? '() => loadGengContent()' : 'null'})"
+        onclick="event.stopPropagation(); GengActions.deleteGeng('${id}', ${reloadCallback ? '() => loadGengContent()' : 'null'})"
         class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
       >
         删除

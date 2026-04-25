@@ -88,6 +88,7 @@
     </div>
   </div>
 
+  <script src="/js/components.js"></script>
   <script src="/js/articleActions.js"></script>
   <script>
     const pageSize = 10;
@@ -200,6 +201,7 @@
         const actualIndex = allArticles.findIndex(article => article.id === item.id);
         return `
         <div class="flex items-start justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+             data-index="${actualIndex}"
              onclick="viewArticleContent(${actualIndex})">
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-2">
@@ -212,31 +214,7 @@
             <div class="text-xs text-gray-400 mt-2">创建时间: ${item.created_at || '未知'}</div>
           </div>
           <div class="flex items-center gap-2 ml-4">
-            <button
-              onclick="copyContentByIndex(${actualIndex}, 'title', ${item.id}); event.stopPropagation();"
-              class="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded hover:bg-blue-200 transition-colors"
-            >
-              标题
-            </button>
-            <button
-              onclick="copyContentByIndex(${actualIndex}, 'normalContent', ${item.id}); event.stopPropagation();"
-              class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
-            >
-              普通内容
-            </button>
-            <button
-              onclick="copyContentByIndex(${actualIndex}, 'payContent', ${item.id}); event.stopPropagation();"
-              class="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded hover:bg-purple-200 transition-colors"
-            >
-              付费内容
-            </button>
-            <button
-              data-id="${item.id}"
-              onclick="deleteArticle(this.dataset.id); event.stopPropagation();"
-              class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
-            >
-              删除
-            </button>
+            ${ArticleActions.getItemButtonsHtml(item, actualIndex, () => loadArticleList())}
           </div>
         </div>
       `;
@@ -307,26 +285,6 @@
       currentPage = page;
       renderList();
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    async function deleteArticle(id) {
-      showConfirm('确定要删除这条记录吗？', async () => {
-        try {
-          const response = await fetch(`/api/articles/${id}`, {
-            method: 'DELETE'
-          });
-          const data = await response.json();
-
-          if (data.success) {
-            showNotification('删除成功', 'success');
-            await loadArticleList();
-          } else {
-            showNotification('删除失败: ' + data.message, 'error');
-          }
-        } catch (error) {
-          showNotification('删除失败: ' + error.message, 'error');
-        }
-      });
     }
 
     function escapeHtml(text) {

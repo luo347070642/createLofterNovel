@@ -416,11 +416,13 @@ function renderGengContentList(items) {
 
   let html = currentItems.map(item => {
     return `
-    <div class="p-4 border border-gray-100 rounded-lg hover:border-gray-200 transition-colors">
+    <div class="p-4 border border-gray-100 rounded-lg hover:border-gray-200 transition-colors cursor-pointer"
+         data-geng-id="${escapeHtml(item.id)}"
+         onclick="GengActions.viewGengContent(this.dataset.gengId)">
       <div class="flex items-center justify-between mb-2">
         <span class="text-sm font-medium text-blue-600">${escapeHtml(item.work_name)} / ${escapeHtml(item.cp_name)} / ${GengActions.getStatusBadge(item)}</span>
         <div class="flex items-center gap-2">
-          ${GengActions.getItemButtonsHtml(item)}
+          ${GengActions.getItemButtonsHtml(item, () => loadData())}
         </div>
       </div>
       <div class="text-sm text-gray-700 line-clamp-2">${escapeHtml(item.geng_text)}</div>
@@ -540,41 +542,13 @@ function renderArticleList(items) {
     }
 
     return `
-      <div class="p-4 border border-gray-100 rounded-lg hover:border-gray-200 transition-colors">
+      <div class="p-4 border border-gray-100 rounded-lg hover:border-gray-200 transition-colors cursor-pointer"
+           data-index="${actualIndex}"
+           onclick="viewArticleContent(${actualIndex})">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-sm font-medium text-green-600">${escapeHtml(item.work_name)} / ${escapeHtml(item.cp_name)} / <span class="px-2 py-0.5 ${hasPayPoint ? (allCopied ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700') : 'bg-red-100 text-red-700'} text-xs rounded-full">${statusText}</span></span>
+          <span class="text-sm font-medium text-green-600">${escapeHtml(item.work_name)} / ${escapeHtml(item.cp_name)} / <span class="px-2 py-1 ${hasPayPoint ? (allCopied ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700') : 'bg-red-100 text-red-700'} text-xs rounded">${statusText}</span></span>
           <div class="flex items-center gap-2">
-            <button
-              onclick="copyContentByIndex(${actualIndex}, 'title', ${articleId})"
-              class="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded hover:bg-blue-200 transition-colors"
-            >
-              标题
-            </button>
-            <button
-              onclick="copyContentByIndex(${actualIndex}, 'normalContent', ${articleId})"
-              class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
-            >
-              普通内容
-            </button>
-            <button
-              onclick="copyContentByIndex(${actualIndex}, 'payContent', ${articleId})"
-              class="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded hover:bg-purple-200 transition-colors"
-            >
-              付费内容
-            </button>
-            <button
-              onclick="viewArticleContent(${actualIndex})"
-              class="px-2 py-1 bg-indigo-100 text-indigo-600 text-xs rounded hover:bg-indigo-200 transition-colors"
-            >
-              查看
-            </button>
-            <button
-              data-id="${item.id}"
-              onclick="deleteArticle(this.dataset.id)"
-              class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
-            >
-              删除
-            </button>
+            ${ArticleActions.getItemButtonsHtml(item, actualIndex, () => loadData())}
           </div>
         </div>
         <div class="text-sm text-gray-700 line-clamp-3 whitespace-pre-wrap">${escapeHtml(content)}</div>
@@ -665,8 +639,8 @@ function copyContentByIndex(index, type, articleId) {
   const updateCallback = function(type, articleId) {
     const articleElement = document.querySelector(`[onclick="copyContentByIndex(${index}, '${type}', ${articleId})"]`).closest('.p-4');
     if (articleElement) {
-      const statusElement = articleElement.querySelector('.text-xs.rounded-full');
-      if (statusElement) {
+      const statusElement = articleElement.querySelector('.text-xs.rounded-full, .text-xs.rounded');
+      if (statusElement && statusElement.tagName !== 'BUTTON') {
         const titleCopied = type === 'title' || statusElement.textContent.includes('已发布');
         const normalContentCopied = type === 'normalContent' || statusElement.textContent.includes('已发布');
         const payContentCopied = type === 'payContent' || statusElement.textContent.includes('已发布');
@@ -749,109 +723,7 @@ function viewArticleContent(index) {
   ArticleActions.viewArticleContent(index);
 }
 
-function closeModal(modalId) {
-  document.getElementById(modalId).classList.add('hidden');
-}
-
-function showCustomConfirm(message) {
-  return new Promise((resolve) => {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
-    modal.innerHTML = `
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div class="p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">确认</h3>
-          <p class="text-gray-700 mb-6">${message}</p>
-          <div class="flex justify-end gap-3">
-            <button data-action="cancel" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              取消
-            </button>
-            <button data-action="confirm" class="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors">
-              确定
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-
-    const cancelBtn = modal.querySelector('[data-action="cancel"]');
-    const confirmBtn = modal.querySelector('[data-action="confirm"]');
-
-    cancelBtn.addEventListener('click', () => {
-      modal.remove();
-      resolve(false);
-    });
-
-    confirmBtn.addEventListener('click', () => {
-      modal.remove();
-      resolve(true);
-    });
-  });
-}
-
-function showNotification(message, type = 'success') {
-  const notification = document.createElement('div');
-  notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-y-0 opacity-100 ${
-    type === 'success' ? 'bg-green-500 text-white' :
-    type === 'error' ? 'bg-red-500 text-white' :
-    type === 'info' ? 'bg-blue-500 text-white' :
-    'bg-gray-500 text-white'
-  }`;
-  notification.textContent = message;
-
-  document.body.appendChild(notification);
-
-  setTimeout(() => {
-    notification.classList.add('translate-y-[-20px]', 'opacity-0');
-  }, 3000);
-
-  setTimeout(() => {
-    if (notification.parentNode) {
-      document.body.removeChild(notification);
-    }
-  }, 3500);
-}
-
-function showConfirm(message, onConfirm, onCancel) {
-  // 创建确认对话框
-  const confirmDialog = document.createElement('div');
-  confirmDialog.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-  confirmDialog.innerHTML = `
-    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
-      <div class="text-lg font-medium text-gray-900 mb-4">确认操作</div>
-      <div class="text-gray-600 mb-6">${message}</div>
-      <div class="flex justify-end gap-3">
-        <button id="confirmCancel" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors">取消</button>
-        <button id="confirmOk" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">确认</button>
-      </div>
-    </div>
-  `;
-  
-  document.body.appendChild(confirmDialog);
-  
-  // 绑定事件
-  const cancelBtn = confirmDialog.querySelector('#confirmCancel');
-  const okBtn = confirmDialog.querySelector('#confirmOk');
-  
-  cancelBtn.addEventListener('click', () => {
-    document.body.removeChild(confirmDialog);
-    if (onCancel) onCancel();
-  });
-  
-  okBtn.addEventListener('click', () => {
-    document.body.removeChild(confirmDialog);
-    if (onConfirm) onConfirm();
-  });
-  
-  // 点击背景关闭
-  confirmDialog.addEventListener('click', (e) => {
-    if (e.target === confirmDialog) {
-      document.body.removeChild(confirmDialog);
-      if (onCancel) onCancel();
-    }
-  });
-}
+// 这些函数已移至components.js中
 
 async function switchDatabase(type) {
   const btnSqlite = document.getElementById('btnSqlite');
