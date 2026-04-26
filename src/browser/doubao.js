@@ -218,15 +218,176 @@ async function monitorContentUntilStable(page, frame, startWaitTime = 0) {
 }
 
 function validateArticleContent(articleContent, finalLength) {
-  if (!articleContent.includes('【付费卡点】\u200b')) {
+  const markers = ['【付费卡点】\u200b', '【付费卡点】', '付费卡点'];
+  
+  let foundMarker = false;
+  let matchedMarker = '';
+  
+  for (const marker of markers) {
+    if (articleContent.includes(marker)) {
+      foundMarker = true;
+      matchedMarker = marker;
+      break;
+    }
+  }
+  
+  if (!foundMarker) {
+    const sampleContent = articleContent.substring(0, 200);
+    console.log(`[验证失败] 内容开头: "${sampleContent}"`);
+    console.log(`[验证失败] 内容长度: ${articleContent.length}`);
     throw new Error('内容异常：未包含【付费卡点】标记');
   }
+  
+  console.log(`[验证通过] 找到标记: "${matchedMarker}"`);
 
   if (finalLength < 100) {
     throw new Error(`超时：文章内容过短，长度: ${finalLength}`);
   }
 
   return true;
+}
+
+async function waitForSendButtonVisible(page) {
+  console.log('等待文章生成完成（检测 !hidden class 是否存在）...');
+  
+  const maxWaitTime = 60 * 1000 * 20;
+  const checkInterval = 2000;
+  let totalWaitTime = 0;
+  let lastLogTime = 0;
+  
+  while (totalWaitTime < maxWaitTime) {
+    const isGenerating = await page.evaluate(() => {
+      const sendBtn = document.querySelector('.send-btn-wrapper');
+      if (!sendBtn) return false;
+      
+      const className = sendBtn.className || '';
+      return className.includes('!hidden');
+    });
+    
+    if (!isGenerating) {
+      console.log(`✅ 文章生成完成，总等待时间: ${Math.floor(totalWaitTime / 1000)}秒`);
+      return true;
+    }
+    
+    await page.waitForTimeout(checkInterval);
+    totalWaitTime += checkInterval;
+    
+    if (totalWaitTime - lastLogTime >= 10000) {
+      console.log(`[等待文章生成] 已等待: ${Math.floor(totalWaitTime / 1000)}秒`);
+      lastLogTime = totalWaitTime;
+    }
+  }
+  
+  throw new Error(`超时：文章在 ${Math.floor(maxWaitTime / 1000)} 秒内未生成完成`);
+}
+
+async function findCopyButtonInFrame(frame, pageDesc) {
+  let copyButton = null;
+
+  const selectors = [
+    'div.top-control-bar-icon-wrapper',
+    'div.container-v6Tm7I',
+    'div[class*="top-control-bar-icon-wrapper"]',
+    'div[class*="container-"]',
+    'div[type="button"]',
+    '[role="button"]',
+    '.copy-btn',
+    'button.copy',
+    'div.copy'
+  ];
+
+  for (const selector of selectors) {
+    try {
+      const elements = await frame.$$(selector);
+      if (elements.length > 0) {
+        for (let i = 0; i < elements.length; i++) {
+          const text = await frame.evaluate(el => el.textContent || el.innerText || '', elements[i]);
+          if (text.includes('复制')) {
+            copyButton = elements[i];
+            console.log(`在${pageDesc}找到复制按钮，选择器: ${selector}`);
+            return copyButton;
+          }
+        }
+      }
+    } catch (error) {
+      console.log(`选择器 "${selector}" 执行失败: ${error.message}`);
+    }
+  }
+
+  console.log(`在${pageDesc}尝试查找包含 "复制" 文字的所有元素...`);
+  const allElements = await frame.$$('*');
+  
+  for (let i = 0; i < allElements.length; i++) {
+    try {
+      const text = await frame.evaluate(el => el.textContent || el.innerText || '', allElements[i]);
+      if (text.includes('复制')) {
+        const className = await frame.evaluate(el => el.className || '', allElements[i]);
+        if (className.includes('icon') || className.includes('wrapper') || className.includes('container')) {
+          copyButton = allElements[i];
+          console.log(`在${pageDesc}通过全文搜索找到复制按钮: className="${className}"`);
+          return copyButton;
+        }
+      }
+    } catch (error) {
+      // 忽略错误
+    }
+  }
+
+  return null;
+}
+
+async function getContentByCopyButton(page) {
+  console.log('开始通过复制按钮获取内容...');
+
+  let copyButton = null;
+
+  console.log('1. 首先在主页面查找复制按钮...');
+  copyButton = await findCopyButtonInFrame(page, '主页面');
+
+  if (!copyButton) {
+    console.log('主页面未找到复制按钮，尝试在 iframe 中查找...');
+    const iframeSelector = 'iframe[src*="ccm-docx"], iframe[src*="doc"], iframe';
+    const iframe = await page.$(iframeSelector);
+    
+    if (iframe) {
+      try {
+        const contentFrame = await iframe.contentFrame();
+        if (contentFrame) {
+          copyButton = await findCopyButtonInFrame(contentFrame, 'iframe');
+        }
+      } catch (error) {
+        console.log(`获取 iframe contentFrame 失败: ${error.message}`);
+      }
+    }
+  }
+
+  if (!copyButton) {
+    throw new Error('未找到复制按钮');
+  }
+
+  console.log('点击复制按钮...');
+  await copyButton.click();
+
+  console.log('等待复制完成（1.5秒）...');
+  await page.waitForTimeout(1500);
+
+  console.log('获取剪贴板内容...');
+  const clipboardContent = await page.evaluate(async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      return text;
+    } catch (error) {
+      console.log('读取剪贴板失败:', error.message);
+      return null;
+    }
+  });
+
+  if (clipboardContent && clipboardContent.length > 0) {
+    console.log(`成功获取剪贴板内容，长度: ${clipboardContent.length} 字符`);
+    return clipboardContent;
+  } else {
+    throw new Error('剪贴板为空或无法读取');
+  }
 }
 
 async function generateArticleCore(geng, options = {}) {
@@ -244,34 +405,25 @@ async function generateArticleCore(geng, options = {}) {
     await sendMessage(page);
 
     console.log('等待豆包生成文章...');
-    const { frame, totalWaitTime, iframeWaitTime } = await waitForIframe(page);
+    await waitForSendButtonVisible(page);
 
-    if (!frame) {
-      if (skipOnIframeTimeout) {
-        console.log('⚠️ 超时：未找到 iframe 或无法获取 contentFrame，跳过此条');
-        return { success: false, reason: 'iframe_timeout' };
-      }
-      throw new Error('超时：未找到 iframe[src*="ccm-docx"] 或无法获取 contentFrame');
-    }
+    console.log('等待页面稳定（2~3秒）...');
+    await randomDelay(2000, 3000);
 
-    const { articleContent, finalLength, extractedTitle, maxContent, maxLength } = await monitorContentUntilStable(page, frame, totalWaitTime);
+    let finalContent = '';
+    let extractedTitle = '';
 
-    let finalContent = articleContent;
-    let finalLen = finalLength;
+    finalContent = await getContentByCopyButton(page);
 
-    if (maxLength > finalLength) {
-      finalContent = maxContent;
-      finalLen = maxLength;
-      console.log(`🔄 使用历史最长内容，长度: ${finalLen}`);
-    }
-
-    if (extractedTitle) {
+    const firstLine = finalContent.split('\n')[0].trim();
+    if (firstLine && firstLine.length > 0 && firstLine.length < 100) {
+      extractedTitle = firstLine;
       finalContent = extractedTitle + ' - ' + finalContent;
       console.log(`📝 提取到标题: ${extractedTitle}`);
     }
 
     try {
-      validateArticleContent(finalContent, finalLen);
+      validateArticleContent(finalContent, finalContent.length);
     } catch (error) {
       if (skipOnContentError) {
         console.log(`⚠️ ${error.message}，跳过此条`);
@@ -280,7 +432,7 @@ async function generateArticleCore(geng, options = {}) {
       throw error;
     }
 
-    console.log(`直接使用监听获取的完整内容，长度: ${finalContent.length} 字符`);
+    console.log(`获取的文章内容长度: ${finalContent.length} 字符`);
 
     if (closeDelay > 0) {
       const actualDelay = closeDelay + Math.random() * 1000;
