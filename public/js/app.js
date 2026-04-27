@@ -205,21 +205,6 @@ async function generateArticles() {
   }
 }
 
-async function clearGengContent() {
-  const confirmed = await showCustomConfirm('确定清空所有梗内容吗？此操作不可恢复。');
-  if (!confirmed) return;
-
-  const response = await fetch('/api/geng-content', { method: 'DELETE' });
-  const data = await response.json();
-
-  if (data.success) {
-    loadData();
-    showNotification('清空成功', 'success');
-  } else {
-    showNotification('清空失败: ' + data.message, 'error');
-  }
-}
-
 async function deleteArticle(id) {
   const confirmed = await showCustomConfirm('确定删除这篇文章吗？');
   if (!confirmed) return;
@@ -677,24 +662,6 @@ function copyContentByIndex(index, type, articleId) {
   ArticleActions.copyContentByIndex(index, type, articleId, updateCallback);
 }
 
-function showCopyNotification(message, type = 'success') {
-  const notification = document.createElement('div');
-  notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-y-0 opacity-100 ${
-    type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-  }`;
-  notification.textContent = message;
-
-  document.body.appendChild(notification);
-
-  setTimeout(() => {
-    notification.classList.add('translate-y-[-20px]', 'opacity-0');
-  }, 2000);
-
-  setTimeout(() => {
-    document.body.removeChild(notification);
-  }, 2500);
-}
-
 function updateStatus(status, text) {
   const indicator = document.getElementById('statusIndicator');
   const statusText = document.getElementById('statusText');
@@ -783,6 +750,7 @@ async function syncFromMysql() {
     if (data.success) {
       showNotification(`从云端同步成功！新增 ${data.stats.workCpAdded} 个作品/CP，${data.stats.gengContentAdded} 个梗内容，${data.stats.articlesAdded} 篇文章；更新 ${data.stats.workCpUpdated} 个作品/CP，${data.stats.gengContentUpdated} 个梗内容，${data.stats.articlesUpdated} 篇文章；删除 ${data.stats.workCpDeleted} 个作品/CP，${data.stats.gengContentDeleted} 个梗内容，${data.stats.articlesDeleted} 篇文章`, 'success');
       loadData();
+      await loadMysqlStats();
     } else {
       showNotification('同步失败: ' + data.message, 'error');
     }
@@ -809,6 +777,7 @@ async function syncToMysql() {
     if (data.success) {
       showNotification(`同步到云端成功！新增 ${data.stats.workCpAdded} 个作品/CP，${data.stats.gengContentAdded} 个梗内容，${data.stats.articlesAdded} 篇文章；更新 ${data.stats.workCpUpdated} 个作品/CP，${data.stats.gengContentUpdated} 个梗内容，${data.stats.articlesUpdated} 篇文章；删除 ${data.stats.workCpDeleted} 个作品/CP，${data.stats.gengContentDeleted} 个梗内容，${data.stats.articlesDeleted} 篇文章`, 'success');
       loadData();
+      await loadMysqlStats();
     } else {
       showNotification('同步失败: ' + data.message, 'error');
     }
@@ -842,11 +811,6 @@ async function loadData() {
     document.getElementById('gengCount').textContent = statusData.data.sqlite.gengCount;
     document.getElementById('articleCount').textContent = statusData.data.sqlite.articleCount;
 
-    // 显示 MySQL 的统计数据（始终固定显示）
-    document.getElementById('mysqlWorkCpCount').textContent = statusData.data.mysql.workCpCount;
-    document.getElementById('mysqlGengCount').textContent = statusData.data.mysql.gengCount;
-    document.getElementById('mysqlArticleCount').textContent = statusData.data.mysql.articleCount;
-
     if (statusData.data.isProcessing) {
       updateStatus('running', '正在处理中...');
     }
@@ -869,6 +833,21 @@ async function loadData() {
         btnSqlite.classList.add('bg-blue-50', 'text-blue-600', 'border-2', 'border-blue-500');
       }
     }
+  }
+}
+
+async function loadMysqlStats() {
+  try {
+    const response = await fetch('/api/status?includeMysql=true');
+    const statusData = await response.json();
+    
+    if (statusData.success && statusData.data.mysql) {
+      document.getElementById('mysqlWorkCpCount').textContent = statusData.data.mysql.workCpCount;
+      document.getElementById('mysqlGengCount').textContent = statusData.data.mysql.gengCount;
+      document.getElementById('mysqlArticleCount').textContent = statusData.data.mysql.articleCount;
+    }
+  } catch (error) {
+    console.error('加载云端统计数据失败:', error);
   }
 }
 

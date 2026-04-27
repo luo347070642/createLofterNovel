@@ -1,6 +1,6 @@
 const { getPendingGengContent, insertArticle, updateGengStatus } = require('../database/dbManager');
-const { initializeDoubaoPage, getDoubaoPage } = require('./browserManager');
-const { randomDelay, checkCaptcha, handleCaptcha, checkAndHandleCaptcha, getInputElement, waitForInputAndFill, sendMessage, formatWorkCp } = require('../utils');
+const { initializeDoubaoPage } = require('./browserManager');
+const { randomDelay, checkAndHandleCaptcha, waitForInputAndFill, sendMessage } = require('../utils');
 
 async function initializeAndValidatePage() {
   let page = await initializeDoubaoPage();
