@@ -49,13 +49,8 @@ function getProcessingStatus() {
   return isProcessing;
 }
 
-function setProcessingStatus(status) {
-  isProcessing = status;
-}
-
 module.exports = {
   search,
   generate,
-  getProcessingStatus,
-  setProcessingStatus
+  getProcessingStatus
 };

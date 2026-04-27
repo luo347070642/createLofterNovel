@@ -100,16 +100,11 @@ function getProcessingStatus() {
   return isProcessing;
 }
 
-function setProcessingStatus(status) {
-  isProcessing = status;
-}
-
 module.exports = {
   getAll,
   remove,
   updateCopyStatus,
   regenerate,
   generateSingle,
-  getProcessingStatus,
-  setProcessingStatus
+  getProcessingStatus
 };

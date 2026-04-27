@@ -112,14 +112,6 @@ async function newPage() {
   return context.newPage();
 }
 
-function getContext() {
-  return context;
-}
-
-function getBrowser() {
-  return browser;
-}
-
 function isReady() {
   return isInitialized && browser !== null && context !== null;
 }
@@ -152,10 +144,6 @@ async function initializeDoubaoPage() {
   return doubaoPage;
 }
 
-async function getDoubaoPage() {
-  return doubaoPage;
-}
-
 async function shutdown() {
   if (doubaoPage) {
     try {
@@ -183,10 +171,7 @@ async function shutdown() {
 module.exports = {
   initialize,
   newPage,
-  getContext,
-  getBrowser,
   isReady,
   shutdown,
-  initializeDoubaoPage,
-  getDoubaoPage
+  initializeDoubaoPage
 };
