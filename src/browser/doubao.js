@@ -415,10 +415,12 @@ async function generateArticleCore(geng, options = {}) {
 
     finalContent = await getContentByCopyButton(page);
 
-    const firstLine = finalContent.split('\n')[0].trim();
+    const lines = finalContent.split('\n');
+    const firstLine = lines[0]?.trim() || '';
     if (firstLine && firstLine.length > 0 && firstLine.length < 100) {
       extractedTitle = firstLine;
-      finalContent = extractedTitle + ' - ' + finalContent;
+      const remainingContent = lines.slice(1).join('\n');
+      finalContent = extractedTitle + ' - ' + remainingContent;
       console.log(`📝 提取到标题: ${extractedTitle}`);
     }
 
