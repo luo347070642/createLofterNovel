@@ -407,7 +407,7 @@ function renderGengContentList(items) {
       <div class="flex items-center justify-between mb-2">
         <span class="text-sm font-medium text-blue-600">${escapeHtml(item.work_name)} / ${escapeHtml(item.cp_name)} / ${GengActions.getStatusBadge(item)}</span>
         <div class="flex items-center gap-2">
-          ${GengActions.getItemButtonsHtml(item, () => loadData())}
+          ${GengActions.getItemButtonsHtml(item, '() => loadData()')}
         </div>
       </div>
       <div class="text-sm text-gray-700 line-clamp-2">${escapeHtml(item.geng_text)}</div>
@@ -533,7 +533,7 @@ function renderArticleList(items) {
         <div class="flex items-center justify-between mb-2">
           <span class="text-sm font-medium text-green-600">${escapeHtml(item.work_name)} / ${escapeHtml(item.cp_name)} / <span class="px-2 py-1 ${hasPayPoint ? (allCopied ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700') : 'bg-red-100 text-red-700'} text-xs rounded">${statusText}</span></span>
           <div class="flex items-center gap-2">
-            ${ArticleActions.getItemButtonsHtml(item, actualIndex, () => loadData())}
+            ${ArticleActions.getItemButtonsHtml(item, actualIndex, '() => loadData()')}
           </div>
         </div>
         <div class="text-sm text-gray-700 line-clamp-3 whitespace-pre-wrap">${escapeHtml(content)}</div>

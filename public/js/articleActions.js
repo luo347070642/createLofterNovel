@@ -166,6 +166,9 @@ const ArticleActions = {
 
   getItemButtonsHtml(item, actualIndex, reloadCallback) {
     const articleId = item.id;
+    // 获取回调函数字符串，接受字符串形式的回调
+    const callbackStr = typeof reloadCallback === 'string' ? reloadCallback : 
+                         (typeof reloadCallback === 'function' ? '() => {}' : 'null');
     return `
       <button
         onclick="event.stopPropagation(); ArticleActions.copyContentByIndex(${actualIndex}, 'title', '${articleId}', ArticleActions.getUpdateCallback(${actualIndex}, '${articleId}'))"
@@ -186,7 +189,7 @@ const ArticleActions = {
         付费内容
       </button>
       <button
-        onclick="event.stopPropagation(); ArticleActions.deleteArticle('${articleId}', ${reloadCallback ? '() => loadArticleList()' : 'null'})"
+        onclick="event.stopPropagation(); ArticleActions.deleteArticle('${articleId}', ${callbackStr})"
         class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
       >
         删除

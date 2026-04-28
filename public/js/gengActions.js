@@ -133,15 +133,18 @@ const GengActions = {
 
   getItemButtonsHtml(item, reloadCallback) {
     const id = item.id;
+    // 获取回调函数字符串，接受字符串形式的回调
+    const callbackStr = typeof reloadCallback === 'string' ? reloadCallback : 
+                         (typeof reloadCallback === 'function' ? '() => {}' : 'null');
     return `
       <button
-        onclick="event.stopPropagation(); GengActions.generateSingleArticle('${id}', ${reloadCallback ? '() => loadGengContent()' : 'null'})"
+        onclick="event.stopPropagation(); GengActions.generateSingleArticle('${id}', ${callbackStr})"
         class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded hover:bg-green-200 transition-colors"
       >
         生成文章
       </button>
       <button
-        onclick="event.stopPropagation(); GengActions.deleteGeng('${id}', ${reloadCallback ? '() => loadGengContent()' : 'null'})"
+        onclick="event.stopPropagation(); GengActions.deleteGeng('${id}', ${callbackStr})"
         class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors"
       >
         删除

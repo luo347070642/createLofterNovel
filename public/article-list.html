@@ -214,7 +214,7 @@
             <div class="text-xs text-gray-400 mt-2">创建时间: ${item.created_at || '未知'}</div>
           </div>
           <div class="flex items-center gap-2 ml-4">
-            ${ArticleActions.getItemButtonsHtml(item, actualIndex, () => loadArticleList())}
+            ${ArticleActions.getItemButtonsHtml(item, actualIndex, '() => loadArticleList()')}
           </div>
         </div>
       `;
