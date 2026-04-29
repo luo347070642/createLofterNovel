@@ -7,7 +7,10 @@
     "start": "chcp 65001 && node index.js",
     "build:css": "postcss public/css/style.css -o public/css/output.css",
     "watch:css": "postcss public/css/style.css -o public/css/output.css --watch",
-    "install:browser": "npx playwright install msedge"
+    "install:browser": "npx playwright install msedge",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -19,6 +22,8 @@
   },
   "devDependencies": {
     "@tailwindcss/line-clamp": "^0.4.4",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/cli": "^2",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.10",
     "postcss-cli": "^11.0.1",

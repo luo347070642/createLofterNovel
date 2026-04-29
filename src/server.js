@@ -123,7 +123,9 @@ async function startServer() {
     app.listen(PORT, async () => {
       console.log(`服务器已启动，访问 http://localhost:${PORT}`);
       try {
-        await initialize();
+        if (!process.env.TAURI) {
+          await initialize();
+        }
         resolve();
       } catch (error) {
         console.error('浏览器初始化失败:', error.message);

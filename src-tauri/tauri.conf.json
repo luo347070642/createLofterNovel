@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicehash/tauri/dev/crates/tauri-config-schema/schema.json",
+  "productName": "LofterNovel",
+  "version": "0.1.0",
+  "identifier": "com.lofter.novel",
+  "build": {
+    "beforeDevCommand": "npm run build:css && set TAURI=1 && start /MIN node index.js",
+    "beforeBuildCommand": "npm run build:css",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../public"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self' 'unsafe-inline' http://localhost:*; connect-src 'self' http://localhost:*; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http://localhost:*; font-src 'self' data:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "createUpdaterArtifacts": false,
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico"
+      },
+      "wix": {
+        "language": "zh-CN"
+      },
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      }
+    }
+  }
+}
