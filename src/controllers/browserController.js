@@ -1,10 +1,11 @@
-const { searchGeng } = require('../browser/kimi');
+const { searchGeng: searchGengKimi } = require('../browser/kimi');
+const { searchGeng: searchGengMetaso } = require('../browser/metaso');
 const { generateArticles } = require('../browser/doubao');
 
 let isProcessing = false;
 
 async function search(req, res) {
-  const { workName, cpName } = req.body;
+  const { workName, cpName, platform } = req.body;
 
   if (!workName || !cpName) {
     return res.json({ success: false, message: '作品名和CP名不能为空' });
@@ -17,7 +18,8 @@ async function search(req, res) {
   isProcessing = true;
 
   try {
-    const count = await searchGeng(workName, cpName);
+    const searchFn = platform === 'metaso' ? searchGengMetaso : searchGengKimi;
+    const count = await searchFn(workName, cpName);
     res.json({ success: true, count, message: `成功获取 ${count} 条梗` });
   } catch (error) {
     res.json({ success: false, message: error.message });
