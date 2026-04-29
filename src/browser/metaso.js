@@ -22,12 +22,11 @@ function splitGengContent(content) {
     }
   }
 
-  // 去掉末尾不属于梗内容的结构化分析模板
   if (groups.length > 0) {
     const last = groups[groups.length - 1];
     const trailingMarkers = [
       '\n①', '\n②', '\n③',
-      '① 核心梗卖点', '② 高光金句', '③',
+      '① 核心梗卖点', '② 高光金句',
       '最优切入场景', '第一幕', '第二幕', '第三幕',
       '以上就是', '希望这些', '如果还有需要', '如果还需要'
     ];
@@ -50,7 +49,7 @@ function splitGengContent(content) {
 
 async function searchGeng(workName, cpName) {
   let page = null;
-  
+
   try {
     const template = await readTemplate('搜梗提示词.txt');
     const prompt = template
@@ -60,8 +59,8 @@ async function searchGeng(workName, cpName) {
     console.log('正在新建标签页...');
     page = await newPage();
 
-    console.log('正在加载页面...');
-    await page.goto('https://www.kimi.com/zh/', {
+    console.log('正在加载秘塔AI...');
+    await page.goto('https://metaso.cn/', {
       waitUntil: 'domcontentloaded',
       timeout: 90000
     });
@@ -72,41 +71,33 @@ async function searchGeng(workName, cpName) {
     await waitForInputAndFill(page, prompt);
     await sendMessage(page, { sendDelay: [4000, 5000] });
 
-    console.log('等待 Kimi 生成内容...');
+    console.log('等待秘塔AI生成内容...');
 
     const checkInterval = 2000;
-    const maxTotalWaitTime = 10 * 60 * 1000; // 10分钟
+    const maxTotalWaitTime = 10 * 60 * 1000;
     const stableThreshold = 5;
     let totalWaitTime = 0;
     let lastLogTime = 0;
     let previousContent = '';
     let stableCount = 0;
-    let hasSeenStopButton = false;
-    let hasSeenStopIcon = false;
 
     while (totalWaitTime < maxTotalWaitTime) {
       await page.waitForTimeout(checkInterval);
       totalWaitTime += checkInterval;
 
-      const sendButtonContainer = await page.$('div.send-button-container');
-      let containerClass = '';
-      if (sendButtonContainer) {
-        containerClass = await sendButtonContainer.getAttribute('class') || '';
-      }
-
-      const stopIcon = await page.$('svg[name="stop"], svg.iconify.send-icon');
-      const hasStopIconNow = stopIcon !== null;
-
       const contentSelectors = [
         'div[class*="markdown"]',
         'div[class*="content"]',
+        'div[class*="answer"]',
+        'div[class*="response"]',
+        'div[class*="message"]',
         'article',
-        '[data-testid="message-content"]',
-        '.message-content',
+        '[class*="ai-message"]',
+        '[class*="assistant"]',
+        '[class*="bot"]',
+        '[class*="reply"]',
         '.chat-content',
-        '[role="main"]',
-        '.answer-content',
-        '.response-content'
+        '[role="main"]'
       ];
 
       let currentContent = '';
@@ -122,18 +113,8 @@ async function searchGeng(workName, cpName) {
       }
 
       if (totalWaitTime - lastLogTime >= 5000) {
-        console.log(`[等待中] 内容长度: ${currentContent.length}，容器class: "${containerClass}"，停止图标: ${hasStopIconNow}，已等待: ${Math.floor(totalWaitTime / 1000)}秒`);
+        console.log(`[等待中] 内容长度: ${currentContent.length}，已等待: ${Math.floor(totalWaitTime / 1000)}秒`);
         lastLogTime = totalWaitTime;
-      }
-
-      if (containerClass.includes('stop')) {
-        hasSeenStopButton = true;
-        console.log('检测到停止按钮状态（通过class）');
-      }
-
-      if (hasStopIconNow) {
-        hasSeenStopIcon = true;
-        console.log('检测到停止图标');
       }
 
       if (currentContent === previousContent && currentContent.length > 50) {
@@ -144,17 +125,7 @@ async function searchGeng(workName, cpName) {
         previousContent = currentContent;
       }
 
-      const stopButtonGone = hasSeenStopButton && !containerClass.includes('stop');
-      const stopIconGone = hasSeenStopIcon && !hasStopIconNow;
-      const contentStable = stableCount >= stableThreshold && currentContent.length > 100;
-
-      if (stopButtonGone || stopIconGone) {
-        console.log(`✅ 停止按钮/图标已消失，判定为输出完成，内容长度: ${currentContent.length}，等待时间: ${Math.floor(totalWaitTime / 1000)}秒`);
-        await page.waitForTimeout(2000);
-        break;
-      }
-
-      if (contentStable) {
+      if (stableCount >= stableThreshold && currentContent.length > 100) {
         console.log(`✅ 连续${stableThreshold}次内容未变化，判定为输出完成，内容长度: ${currentContent.length}，等待时间: ${Math.floor(totalWaitTime / 1000)}秒`);
         break;
       }
@@ -164,33 +135,29 @@ async function searchGeng(workName, cpName) {
       console.log(`⏰ 已达到最大等待时间 ${Math.floor(maxTotalWaitTime / 1000)}秒，强制结束等待`);
     }
 
-    console.log(`Kimi 内容生成完成，总等待时间: ${Math.floor(totalWaitTime / 1000)}秒`);
+    console.log(`秘塔AI内容生成完成，总等待时间: ${Math.floor(totalWaitTime / 1000)}秒`);
 
-    const contentSelectors = [
+    const finalSelectors = [
       'div[class*="markdown"]',
       'div[class*="content"]',
+      'div[class*="answer"]',
+      'div[class*="response"]',
+      'div[class*="message"]',
       'article',
-      '[data-testid="message-content"]',
-      '.message-content',
-      '.chat-content',
-      '[role="main"]',
-      '.answer-content',
-      '.response-content',
+      '[class*="ai-message"]',
       '[class*="assistant"]',
       '[class*="bot"]',
-      '[class*="answer"]',
       '[class*="reply"]',
-      'div.chat-message',
+      '.chat-content',
+      '[role="main"]',
       '.message-body',
-      '[data-testid="assistant-message"]',
-      '.assistant-message',
-      '.bot-message'
+      '[data-testid="message-content"]'
     ];
 
     let fullContent = '';
     let maxLength = 0;
-    
-    for (const selector of contentSelectors) {
+
+    for (const selector of finalSelectors) {
       const element = await page.$(selector);
       if (element) {
         const text = await element.textContent();
@@ -233,9 +200,9 @@ async function searchGeng(workName, cpName) {
     console.log(`已将 ${gengGroups.length} 条梗存入数据库`);
 
     return gengGroups.length;
-    
+
   } catch (error) {
-    console.error('搜梗过程中发生错误:', error.message);
+    console.error('秘塔AI搜梗过程中发生错误:', error.message);
     throw error;
   }
 }
