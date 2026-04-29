@@ -1,7 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "WebSearch",
+      "Bash(cargo --version)",
+      "Bash(rustc --version)",
+      "Bash(npm *)",
+      "Bash(winget install *)",
+      "Bash(export PATH=\"$HOME/.cargo/bin:$PATH\")",
+      "Bash(node *)",
+      "Bash(npx tauri *)",
+      "Bash(cargo check *)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(taskkill /F /IM msedge.exe)",
+      "Bash(taskkill /F /IM lofter-novel.exe)",
+      "PowerShell(git *)"
     ]
   }
 }
