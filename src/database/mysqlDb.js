@@ -1,11 +1,11 @@
 const mysql = require('mysql2/promise');
 
 const MYSQL_CONFIG = {
-  host: 'sh-cynosdbmysql-grp-ivlm6haw.sql.tencentcdb.com',
-  port: 29635,
-  user: 'root',
-  password: '!Q2w3e4r....',
-  database: 'lofter',
+  host: process.env.MYSQL_HOST || 'localhost',
+  port: parseInt(process.env.MYSQL_PORT) || 3306,
+  user: process.env.MYSQL_USER || 'root',
+  password: process.env.MYSQL_PASSWORD || '',
+  database: process.env.MYSQL_DATABASE || 'lofter',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
